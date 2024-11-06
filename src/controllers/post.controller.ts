@@ -1,21 +1,32 @@
 import { Request, Response } from "express";
 import prisma from "../config/prisma";
+import cloudinary from "../utils/cloudinary";
 
 export const createPost = async (req: Request, res: Response) => {
-  const userId = req.body.userId;
-  const { content, mediaUrl, postType, visibility, location } = req.body;
-  const post = await prisma.post.create({
-    data: {
-      content,
-      mediaUrl,
-      postType,
-      visibility,
-      location,
-      userId,
-    },
-  });
-
-  res.status(201).json(post);
+  const { content, userId, visibility, tags, location } = req.body;
+  try {
+    let mediaUrl = "";
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "posts",
+        resource_type: "auto",
+      });
+      mediaUrl = result.secure_url;
+    }
+    const post = await prisma.post.create({
+      data: {
+        content,
+        mediaUrl,
+        userId,
+        visibility,
+        tags: tags ? tags.split(",") : [],
+        location,
+      },
+    });
+    res.status(201).json(post);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create post" });
+  }
 };
 
 export const updatePost = async (req: Request, res: Response) => {
