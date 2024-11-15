@@ -1,9 +1,16 @@
 import express from "express";
 import dotenv from "dotenv";
+import http from "http";
+import { setupSocket } from "./utils/socket";
 import authRoutes from "./routes/auth.routes";
 import postRoutes from "./routes/post.routes";
 dotenv.config();
 const app = express();
+const server = http.createServer(app);
+const io = setupSocket(server); // we have to pass this to socket setup
+server.listen(process.env.PORT || 5000, () => {
+  console.log(`server running on port ${process.env.PORT || 5000}`);
+});
 app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/posts", postRoutes);
