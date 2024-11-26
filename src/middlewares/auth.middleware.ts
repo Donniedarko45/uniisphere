@@ -37,4 +37,3 @@ export const authenticate = (
       .json({ message: "Token verification failed", error: error });
   }
 };
-
