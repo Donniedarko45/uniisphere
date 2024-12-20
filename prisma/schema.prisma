@@ -21,6 +21,7 @@ model User {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   otps              otp[]
+  bookmarks         Bookmark[]
   posts             Post[]
   connections1      Connection[]   @relation("UserConnections1")
   connections2      Connection[]   @relation("UserConnections2")
@@ -124,7 +125,7 @@ model Book {
   description String?    @db.Text
   coverUrl    String
   pdfUrl      String
-  category    String     @relation(fields: [categoryId], references: [id])
+  category    Category   @relation(fields: [categoryId], references: [id])
   categoryId  String
   views       Int        @default(0)
   bookmarks   Bookmark[]
