@@ -116,3 +116,45 @@ model UserActivity {
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id])
 }
+
+model Book {
+  id          String     @id @default(uuid())
+  title       String
+  author      String
+  description String?    @db.Text
+  coverUrl    String
+  pdfUrl      String
+  category    String     @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  views       Int        @default(0)
+  bookmarks   Bookmark[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([categoryId])
+  @@index([title])
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  books       Book[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  page      Int
+  note      String?  @db.Text
+  book      Book     @relation(fields: [bookId], references: [id])
+  bookId    String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookId])
+  @@index([userId])
+}
