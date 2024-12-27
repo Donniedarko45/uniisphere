@@ -2,10 +2,7 @@ import { verifyToken } from "../utils/jwt.utils";
 import { Request, Response, NextFunction } from "express";
 
 interface AuthenticatedRequest extends Request {
-  body: {
-    userId?: string;
-    [key: string]: any;
-  };
+  userId?: string;
 }
 
 export const authenticate = (
@@ -24,16 +21,14 @@ export const authenticate = (
   try {
     const decoded = verifyToken(token);
 
-    if (!decoded) {
+    if (!decoded || !decoded.userId) {
       return res.status(401).json({ message: "Invalid token" });
     }
 
-    req.body.userId = decoded.userId;
+    req.userId = decoded.userId;
     next();
   } catch (error) {
     console.error("Token verification error:", error);
-    return res
-      .status(401)
-      .json({ message: "Token verification failed", error: error });
+    return res.status(401).json({ message: "Token verification failed" });
   }
 };

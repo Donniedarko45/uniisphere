@@ -18,7 +18,7 @@ export class BookController {
     }
   }
 
-  async getBooks(req: Request, res: Response) {
+  async getBooks(res: Response) {
     try {
       const books = await bookService.getBooks();
       return res.status(200).json(books);
@@ -44,7 +44,7 @@ export class BookController {
 
   async createBookmark(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.body?.userId;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -62,11 +62,12 @@ export class BookController {
 
   async getBookmarks(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).userId;
+      const bookId = req.query.bookId as string;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      const bookmarks = await bookmarkService.getBookmarks(userId);
+      const bookmarks = await bookmarkService.getBookmarks(userId, bookId);
       return res.status(200).json(bookmarks);
     } catch (error) {
       console.error("Error getting bookmarks", error);

@@ -10,16 +10,20 @@ export class BookmarkService {
         ...bookmark,
         userId,
       },
+      include: {
+        book: true,
+      },
     });
   }
 
-  async getBookmarks(userId: string) {
+  async getBookmarks(userId: string, bookId: string) {
     return await prisma.bookmark.findMany({
       where: {
         userId,
+        bookId,
       },
-      include: {
-        book: true,
+      orderBy: {
+        page: "asc",
       },
     });
   }
