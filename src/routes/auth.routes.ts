@@ -1,15 +1,9 @@
 import { Router } from "express";
-import express from "express";
-import {
-  clerkOauth,
-  login,
-  otpLogin,
-  register,
-} from "../controllers/auth.controller";
+import { clerkOauth, login, otpLogin, register } from "../controllers/auth.controller";
 
-const app = express();
 const router = Router();
-app.use(express.urlencoded({ extended: true }));
+
+// Public routes (no authentication needed)
 router.post("/register", register);
 router.post("/login", login);
 router.post("/otp-login", otpLogin);

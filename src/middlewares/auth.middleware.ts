@@ -13,7 +13,7 @@ export const authenticate = (
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    return res.status(401).json({ message: "No token provided" });
+    return next(new Error("No token provided"));
   }
 
   const token = authHeader.split(" ")[1];
@@ -22,13 +22,13 @@ export const authenticate = (
     const decoded = verifyToken(token);
 
     if (!decoded || !decoded.userId) {
-      return res.status(401).json({ message: "Invalid token" });
+      return next(new Error("Invalid token"));
     }
 
     req.userId = decoded.userId;
-    next();
+    return next();
   } catch (error) {
     console.error("Token verification error:", error);
-    return res.status(401).json({ message: "Token verification failed" });
+    return next(error);
   }
 };

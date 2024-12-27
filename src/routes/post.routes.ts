@@ -1,8 +1,23 @@
 import { Router } from "express";
-import { createPost } from "../controllers/post.controller";
 import { upload } from "../middlewares/upload.middleware";
+import { createPost, updatePost, deletePost, getPost, getUserPosts } from '../controllers/post.controller';
+import { authenticate } from '../middlewares/auth.middleware';
 
 const router = Router();
-router.post("/create-post", upload.single("media"), createPost);
+
+// Public routes (no authentication needed)
+router.get('/:postId', getPost as any);  
+
+
+// Protected routes (authentication required)
+router.post('/', authenticate, upload.single("media"), createPost);
+router.put('/:postId', authenticate, updatePost);
+router.delete('/:postId', authenticate, deletePost);
+router.get('/user/:userId', authenticate, getUserPosts);
 
 export default router;
+
+
+
+
+

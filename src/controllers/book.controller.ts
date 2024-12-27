@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { BookmarkSchema, BookSchema } from "../type/book";
 import { BookService } from "../services/bookService";
 import { BookmarkService } from "../services/bookmarkService";
@@ -7,71 +7,66 @@ const bookService = new BookService();
 const bookmarkService = new BookmarkService();
 
 export class BookController {
-  async createBook(req: Request, res: Response) {
+  async createBook(req: Request, res: Response, next: NextFunction) {
     try {
       const validateData = BookSchema.parse(req.body);
       const book = await bookService.createBook(validateData);
-      return res.status(201).json(book);
+      res.status(201).json(book);
     } catch (error) {
-      console.error("Error creating book", error);
-      return res.status(400).json({ error: "Invalid book data" });
+      next(error);
     }
   }
 
-  async getBooks(res: Response) {
+  async getBooks(req: Request, res: Response, next: NextFunction) {
     try {
       const books = await bookService.getBooks();
-      return res.status(200).json(books);
+      res.status(200).json(books);
     } catch (error) {
-      console.error("Error getting books", error);
-      return res.status(500).json({ error: "Failed to get books" });
+      next(error);
     }
   }
 
-  async getBookById(req: Request, res: Response) {
+  async getBookById(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
       const book = await bookService.getBookById(id);
       if (!book) {
-        return res.status(404).json({ message: "Book not found" });
+        res.status(404).json({ message: "Book not found" });
+      } else {
+        res.status(200).json(book);
       }
-      return res.status(200).json(book);
     } catch (error) {
-      console.error("Error getting book by id", error);
-      return res.status(500).json({ error: "Failed to get book" });
+      next(error);
     }
   }
 
-  async createBookmark(req: Request, res: Response) {
+  async createBookmark(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.body?.userId;
       if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
+        res.status(401).json({ message: "Unauthorized" });
+        return;
       }
       const validateData = BookmarkSchema.parse(req.body);
-      const bookmark = await bookmarkService.createBookmark(
-        userId,
-        validateData,
-      );
-      return res.status(201).json(bookmark);
+      const bookmark = await bookmarkService.createBookmark(userId, validateData);
+      res.status(201).json(bookmark);
     } catch (error) {
-      console.error("Error creating bookmark", error);
-      return res.status(400).json({ error: "Invalid bookmark data" });
+      next(error);
     }
   }
 
-  async getBookmarks(req: Request, res: Response) {
+  async getBookmarks(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).userId;
       const bookId = req.query.bookId as string;
       if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
+        res.status(401).json({ message: "Unauthorized" });
+        return;
       }
       const bookmarks = await bookmarkService.getBookmarks(userId, bookId);
-      return res.status(200).json(bookmarks);
+      res.status(200).json(bookmarks);
     } catch (error) {
-      console.error("Error getting bookmarks", error);
-      return res.status(500).json({ error: "Failed to get bookmarks" });
+      next(error);
     }
   }
 }
