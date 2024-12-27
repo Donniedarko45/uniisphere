@@ -37,3 +37,48 @@ export const sendConnectionRequest = async (
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
+// Accept a connection request
+export const acceptConnection = async (req: Request, res: Response) => {
+  const { connectionId } = req.params;
+
+  await prisma.connection.update({
+    where: { id: connectionId },
+    data: { status: 'accepted' },
+  });
+
+  res.status(200).json({ message: 'Connection accepted' });
+};
+
+// Decline a connection request
+export const declineConnection = async (req: Request, res: Response) => {
+  const { connectionId } = req.params;
+
+  await prisma.connection.update({
+    where: { id: connectionId },
+    data: { status: 'declined' },
+  });
+
+  res.status(200).json({ message: 'Connection declined' });
+};
+
+// Get user's connections
+export const getConnections = async (req: Request, res: Response) => {
+  const userId = req.body.userId;  // Extract from token
+
+  const connections = await prisma.connection.findMany({
+    where: {
+      OR: [
+        { userId1: userId, status: 'accepted' },
+        { userId2: userId, status: 'accepted' },
+      ],
+    },
+    include: {
+      user1: true,
+      user2: true,
+    },
+  });
+
+  res.status(200).json({ connections });
+};
