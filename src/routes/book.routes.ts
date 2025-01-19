@@ -1,18 +1,31 @@
-import { Router } from 'express';
+import { Router } from "express";
 
-import { authenticate } from '../middlewares/auth.middleware';
-import { BookController } from '../controllers/book.controller';
+import { authenticate } from "../middlewares/auth.middleware";
+import { BookController } from "../controllers/book.controller";
 
 const router = Router();
-const bookController = new BookController()
+const bookController = new BookController();
+
+/*
+   all the bookController routes should be protected
+*/
 
 // Apply auth to each route
-router.post('/books', authenticate, bookController.createBook);
-router.get('/books', authenticate, bookController.getBooks);
-router.get('/books/:id', authenticate, bookController.getBookById);
+router.post("/books", authenticate, bookController.createBook);
+router.get("/books", authenticate, bookController.getBooks);
+router.get("/books/:id", authenticate, bookController.getBookById);
 
 // Bookmark routes
-router.post('/books/:bookId/bookmarks', authenticate, bookController.createBookmark);
-router.get('/books/:bookId/bookmarks', authenticate, bookController.getBookmarks);
+router.post(
+  "/books/:bookId/bookmarks",
+  authenticate,
+  bookController.createBookmark,
+);
+router.get(
+  "/books/:bookId/bookmarks",
+  authenticate,
+  bookController.getBookmarks,
+);
 
 export default router;
+

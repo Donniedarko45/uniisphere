@@ -3,7 +3,6 @@ import { clerkOauth, login, otpLogin, register } from "../controllers/auth.contr
 
 const router = Router();
 
-// Public routes (no authentication needed)
 router.post("/register", register);
 router.post("/login", login);
 router.post("/otp-login", otpLogin);

@@ -34,7 +34,8 @@ export const sendGroupMessage = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to send Message" });
   }
 };
-
+// next task deleting the group only the admin can delete the group
+// privilages are given to the admin only
 /*
  * task1: we have to create a group
  * task2: send group Message
