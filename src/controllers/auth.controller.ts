@@ -4,29 +4,56 @@ import prisma from "../config/prisma";
 import { generateToken } from "../utils/jwt.utils";
 import { verifyOtp } from "../utils/otp.util";
 
-export const register = async (req: Request, res: Response,next:NextFunction):Promise<any> => {
-  const { email, username, password } = req.body;
+export const register = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<any> => {
+  try {
+    const {
+      email,
+      username,
+      password,
+      PhoneNumber,
+      location,
+      bio,
+      profilePictureUrl,
+      college,
+      degree,
+      startYear,
+      endYear,
+    } = req.body;
 
-  const existingUser = await prisma.user.findUnique({
-    where : {email}
-  });
-  if(existingUser){
-    return res.status(400).json({
-      error: 'email already registered'
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
     });
-  }
-  const hashedpassword = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
-    data: {
-      email: email,
-      username: username,
-      passwordHash: hashedpassword,
-      profilePictureUrl: "",
-    },
-  });
+    if (existingUser) {
+      return res.status(400).json({
+        error: "email already registered",
+      });
+    }
+    const hashedpassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        email,
+        username,
+        passwordHash: hashedpassword,
+        profilePictureUrl,
+        PhoneNumber,
+        location,
+        bio,
+        college,
+        degree,
+        startYear,
+        endYear,
+      },
+    });
 
-  const token = generateToken(user.id);
-  res.status(201).json({ token });
+    const token = generateToken(user.id);
+    res.status(201).json({ token, user });
+  } catch (error) {
+    return next(error);
+  }
 };
 
 export const login = async (
@@ -80,7 +107,8 @@ export const otpLogin = async (
   }
 };
 
-export const googleAuth = async (  req: Request,
+export const googleAuth = async (
+  req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<any> => {
@@ -102,8 +130,9 @@ export const googleAuth = async (  req: Request,
         googleId,
         email,
         username,
+        PhoneNumber,
         profilePictureUrl,
-        passwordHash: "", // Empty since using OAuth
+        passwordHash: "",
       },
     });
 
@@ -115,6 +144,6 @@ export const googleAuth = async (  req: Request,
     return res.json({ user: newUser, token });
   } catch (error) {
     console.error("Google auth error:", error);
-    return res.status(500).json({ error: "Authentication failed" });
+    return next(error);
   }
 };

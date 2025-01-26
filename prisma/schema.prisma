@@ -11,7 +11,7 @@ model User {
   id                String            @id @default(uuid())
   username          String            @unique
   email             String            @unique
-  PhoneNumber       String            @unique
+  PhoneNumber       String?           @unique
   passwordHash      String?
   googleId          String?           @unique
   profilePictureUrl String
