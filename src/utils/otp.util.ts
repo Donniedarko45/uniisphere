@@ -6,7 +6,6 @@ export const generateOtp = async (userId: string) => {
       data: {
         userId,
         code: otpCode,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       },
     });
     return otpCode;
