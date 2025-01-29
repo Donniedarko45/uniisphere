@@ -13,6 +13,8 @@ model User {
   email             String            @unique
   PhoneNumber       String?           @unique
   passwordHash      String?
+  firstName         String
+  lastName          String?
   googleId          String?           @unique
   profilePictureUrl String
   headline          String?

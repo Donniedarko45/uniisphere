@@ -3,17 +3,54 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "PhoneNumber" TEXT,
     "passwordHash" TEXT,
+    "firstName" TEXT NOT NULL,
+    "lastName" TEXT,
     "googleId" TEXT,
     "profilePictureUrl" TEXT NOT NULL,
     "headline" TEXT,
     "location" TEXT,
     "bio" TEXT,
     "college" TEXT,
+    "degree" TEXT,
+    "startYear" INTEGER,
+    "endYear" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Comments" (
+    "id" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "userId" TEXT NOT NULL,
+    "postId" TEXT NOT NULL,
+
+    CONSTRAINT "Comments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Likes" (
+    "id" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "userId" TEXT NOT NULL,
+    "postId" TEXT NOT NULL,
+
+    CONSTRAINT "Likes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Share" (
+    "id" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "userId" TEXT NOT NULL,
+    "postId" TEXT NOT NULL,
+
+    CONSTRAINT "Share_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -147,6 +184,18 @@ CREATE TABLE "Bookmark" (
     CONSTRAINT "Bookmark_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "CloudinaryMedia" (
+    "id" TEXT NOT NULL,
+    "publicId" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "resourceType" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "userId" TEXT NOT NULL,
+
+    CONSTRAINT "CloudinaryMedia_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 
@@ -154,7 +203,16 @@ CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "User_PhoneNumber_key" ON "User"("PhoneNumber");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "User_googleId_key" ON "User"("googleId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Likes_userId_postId_key" ON "Likes"("userId", "postId");
+
+-- CreateIndex
+CREATE INDEX "PostContentTagsIndex" ON "Post"("content", "tags");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Connection_userId1_userId2_key" ON "Connection"("userId1", "userId2");
@@ -176,6 +234,24 @@ CREATE INDEX "Bookmark_bookId_idx" ON "Bookmark"("bookId");
 
 -- CreateIndex
 CREATE INDEX "Bookmark_userId_idx" ON "Bookmark"("userId");
+
+-- AddForeignKey
+ALTER TABLE "Comments" ADD CONSTRAINT "Comments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Comments" ADD CONSTRAINT "Comments_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Likes" ADD CONSTRAINT "Likes_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Likes" ADD CONSTRAINT "Likes_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Share" ADD CONSTRAINT "Share_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Share" ADD CONSTRAINT "Share_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "otp" ADD CONSTRAINT "otp_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -218,3 +294,6 @@ ALTER TABLE "Bookmark" ADD CONSTRAINT "Bookmark_bookId_fkey" FOREIGN KEY ("bookI
 
 -- AddForeignKey
 ALTER TABLE "Bookmark" ADD CONSTRAINT "Bookmark_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CloudinaryMedia" ADD CONSTRAINT "CloudinaryMedia_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
