@@ -12,6 +12,8 @@ export const register = async (
   try {
     const {
       email,
+      firstName,
+      lastName,
       username,
       password,
       PhoneNumber,
@@ -37,6 +39,8 @@ export const register = async (
       data: {
         email,
         username,
+        firstName,
+        lastName,
         passwordHash: hashedpassword,
         profilePictureUrl,
         PhoneNumber,
@@ -130,7 +134,6 @@ export const googleAuth = async (
         googleId,
         email,
         username,
-        PhoneNumber,
         profilePictureUrl,
         passwordHash: "",
       },
