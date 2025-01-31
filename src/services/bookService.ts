@@ -8,6 +8,10 @@ export class BookService {
     return await prisma.book.create({
       data: {
         ...book,
+        title: book.title,
+        author: book.author,
+        categoryId: book.categoryId,
+        description: book.description,
         views: 0,
       },
       include: {
@@ -15,7 +19,6 @@ export class BookService {
       },
     });
   }
-
   async getBooks() {
     return await prisma.book.findMany({
       include: {

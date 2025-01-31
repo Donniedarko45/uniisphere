@@ -169,8 +169,8 @@ model Book {
   title       String
   author      String
   description String?    @db.Text
-  coverUrl    String
-  pdfUrl      String
+  coverUrl    String?
+  pdfUrl      String?
   category    Category   @relation(fields: [categoryId], references: [id])
   categoryId  String
   views       Int        @default(0)
