@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyOtp = exports.generateOtp = void 0;
+exports.generateOtp = void 0;
 const prisma_1 = __importDefault(require("../config/prisma"));
 const generateOtp = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -31,15 +31,3 @@ const generateOtp = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.generateOtp = generateOtp;
-const verifyOtp = (userId, otpCode) => __awaiter(void 0, void 0, void 0, function* () {
-    const otp = yield prisma_1.default.otp.findFirst({
-        where: { userId, code: otpCode },
-    });
-    if (!otp)
-        return false;
-    yield prisma_1.default.otp.delete({
-        where: { id: otp.id },
-    });
-    return true;
-});
-exports.verifyOtp = verifyOtp;
