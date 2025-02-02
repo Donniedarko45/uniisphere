@@ -209,3 +209,45 @@ export const googleAuth = async (
     return next(error);
   }
 };
+
+export const resendOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<any> => {
+  try {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    await prisma.otp.deleteMany({
+      where: { userId: user.id }
+    });
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+
+    await prisma.otp.create({
+      data: {
+        userId: user.id,
+        code: otp,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+      },
+    });
+
+    await sendOtp(email, otp);
+
+    res.status(200).json({ 
+      message: "New OTP sent successfully",
+      expiresIn: "5 minutes"
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
