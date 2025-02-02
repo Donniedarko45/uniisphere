@@ -26,7 +26,7 @@ model User {
   endYear           Int?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
-  otps              otp[]
+  otps              Otp[]
   bookmarks         Bookmark[]
   posts             Post[]
   connections1      Connection[]      @relation("UserConnections1")
@@ -40,6 +40,15 @@ model User {
   Comments          Comments[]
   Likes             Likes[]
   CloudinaryMedia   CloudinaryMedia[]
+}
+
+model Otp {
+  id        String   @id @default(uuid())
+  userId    String
+  code      String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Comments {
@@ -71,14 +80,6 @@ model Share {
   postId String
   user   User   @relation(fields: [userId], references: [id])
   post   Post   @relation(fields: [postId], references: [id])
-}
-
-model otp {
-  id        String   @id @default(uuid())
-  userId    String
-  code      String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Post {
