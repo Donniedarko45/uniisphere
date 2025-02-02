@@ -2,19 +2,18 @@ import bcrypt from "bcryptjs";
 import { NextFunction, Request, Response } from "express";
 import prisma from "../config/prisma";
 import { generateToken } from "../utils/jwt.utils";
-
-import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
 import crypto from "crypto";
 
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: "gmail",
   auth: {
     user: process.env.EMAIL,
-    pass: process.env.PASSWORD
-  }
+    pass: process.env.PASSWORD,
+  },
 });
 
 const sendOtp = async (email: string, otp: string) => {
@@ -22,15 +21,15 @@ const sendOtp = async (email: string, otp: string) => {
     const mailOptions = {
       from: process.env.EMAIL,
       to: email,
-      subject: 'Email Verification OTP',
-      text: `Your OTP for email verification is ${otp}`
+      subject: "Email Verification OTP",
+      text: `Your OTP for email verification is ${otp}`,
     };
 
     await transporter.verify();
     await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully');
+    console.log("Email sent successfully");
   } catch (error) {
-    console.error('Email sending failed:', error);
+    console.error("Email sending failed:", error);
     throw new Error(`Failed to send email: ${error}`);
   }
 };
@@ -43,7 +42,6 @@ export const register = async (
   try {
     const { email, username } = req.body;
 
-    // Check if email or username already exists
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [{ email }, { username }],
@@ -59,10 +57,8 @@ export const register = async (
       });
     }
 
-    // Generate OTP
     const otp = crypto.randomInt(100000, 999999).toString();
 
-    // Create a temporary user entry (optional placeholder)
     const tempUser = await prisma.user.create({
       data: {
         email,
