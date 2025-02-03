@@ -5,6 +5,7 @@ import { generateToken } from "../utils/jwt.utils";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import crypto from "crypto";
+import passport from "passport";
 
 dotenv.config();
 
@@ -58,14 +59,12 @@ export const register = async (
     }
 
     const otp = crypto.randomInt(100000, 999999).toString();
-
     const tempUser = await prisma.user.create({
       data: {
         email,
         username,
       },
     });
-
     await prisma.otp.create({
       data: {
         userId: tempUser.id,
@@ -73,9 +72,7 @@ export const register = async (
         expiresAt: new Date(Date.now() + 5 * 60 * 1000),
       },
     });
-
     await sendOtp(email, otp);
-
     res.status(200).json({ message: "OTP sent to your email" });
   } catch (error) {
     return next(error);
@@ -119,9 +116,7 @@ export const verifyOtp = async (
     }
 
     await prisma.otp.delete({ where: { id: otpRecord.id } });
-
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const updatedUser = await prisma.user.update({
       where: { email },
       data: {
@@ -141,7 +136,6 @@ export const verifyOtp = async (
     });
 
     const token = generateToken(updatedUser.id);
-
     res.status(201).json({ token, user: updatedUser });
   } catch (error) {
     return next(error);
@@ -176,50 +170,41 @@ export const googleAuth = async (
   res: Response,
   next: NextFunction,
 ): Promise<any> => {
-  try {
-    const { googleId, email, username, profilePictureUrl } = req.body;
+  passport.authenticate("google", { scope: ["profile", "email"] })(
+    req,
+    res,
+    next,
+  );
+};
 
-    const user = await prisma.user.findUnique({
-      where: { googleId },
-    });
-
-    if (user) {
-      const token = generateToken(user.id);
-      return res.json({ user, token });
+export const googleAuthCallback = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<any> => {
+  passport.authenticate("google", { session: false }, (err, user) => {
+    if (err) {
+      return next(err);
+    }
+    if (!user) {
+      return res.status(401).json({ message: "Authentication failed" });
     }
 
-    const newUser = await prisma.user.create({
-      data: {
-        googleId,
-        email,
-        username,
-        profilePictureUrl,
-        passwordHash: "",
-      },
-    });
-
-    if (!newUser) {
-      return res.status(400).json({ error: "Failed to create user" });
-    }
-
-    const token = generateToken(newUser.id);
-    return res.json({ user: newUser, token });
-  } catch (error) {
-    console.error("Google auth error:", error);
-    return next(error);
-  }
+    const token = generateToken(user.id);
+    res.redirect(`${process.env.CLIENT_URL}/auth/success?token=${token}`);
+  })(req, res, next);
 };
 
 export const resendOtp = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const { email } = req.body;
 
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (!user) {
@@ -227,7 +212,7 @@ export const resendOtp = async (
     }
 
     await prisma.otp.deleteMany({
-      where: { userId: user.id }
+      where: { userId: user.id },
     });
 
     const otp = crypto.randomInt(100000, 999999).toString();
@@ -242,11 +227,10 @@ export const resendOtp = async (
 
     await sendOtp(email, otp);
 
-    res.status(200).json({ 
+    res.status(200).json({
       message: "New OTP sent successfully",
-      expiresIn: "5 minutes"
+      expiresIn: "5 minutes",
     });
-
   } catch (error) {
     next(error);
   }
