@@ -38,7 +38,7 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
 exports.updateProfile = updateProfile;
 /*
  *
- * we have to implement a search functionality for users where suppose there 2 data in database donniedarko and donniedarko1 when user type donniedarko it should return both the data
+ * we have to implement a search functionality for users where suppose there 2 data in database   donniedarko and donniedarko1 when user type donniedarko it should return both the data
  *
  */
 const getProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
