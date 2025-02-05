@@ -10,7 +10,7 @@ const router = Router();
 router.get('/:postId', getPost as any);  
 
 
-// Protected routes (authentication required)
+// Protected routes 
 router.post('/', authenticate, upload.single("media"), createPost);
 router.put('/:postId', authenticate, updatePost);
 router.delete('/:postId', authenticate, deletePost);
