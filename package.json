@@ -28,7 +28,12 @@
     "cloudinary": "^1.21.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+<<<<<<< HEAD
     "express": "^4.21.2",
+=======
+    "express": "^4.21.1",
+    "jest": "^29.7.0",
+>>>>>>> f59f762 (implemented upload feature)
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "multer-storage-cloudinary": "^4.0.0",
