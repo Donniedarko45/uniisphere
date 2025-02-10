@@ -6,21 +6,24 @@ export const getFeed = async (
   next: NextFunction,
 ): Promise<any> => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const skip = (Number(page) - 1) * Number(limit);
-
+    const { cursor, limit } = req.query;
+    const pageSize = parseInt(limit as string) || 10;
     const posts = await prisma.post.findMany({
-      skip,
-      take: Number(limit),
+      take: pageSize,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor as string } : undefined,
       orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { username: true, profilePictureUrl: true } },
-        Likes: true,
+        user: true,
         Comments: true,
+        Likes: true,
       },
     });
-    res.status(200).json(posts);
+    const nextCursor = posts.length ? posts[posts.length - 1].id : null;
+    res.json({ posts, nextCursor });
   } catch (error) {
+    console.error("error fetching feed posts", error);
     next(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
