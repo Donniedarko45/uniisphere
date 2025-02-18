@@ -35,6 +35,13 @@ const sendOtp = async (email: string, otp: string) => {
   }
 };
 
+/*
+ *
+ *to fix things=> when I am trying to post something, suppose i am kartikey(userid-1) and you are adarsh(userid-2) and when I(Kartikey) logged into the system I got some jwt token . so what I(Kartikey) is doing that he is posting something with passing userid-2 which is of adarsh id and with jwt token of himself he can successfully posting posts from account-2 dont know why it is happening
+ *
+ *
+ */
+
 export const register = async (
   req: Request,
   res: Response,
