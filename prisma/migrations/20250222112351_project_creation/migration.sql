@@ -1,17 +1,21 @@
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
-    "username" TEXT NOT NULL,
+    "username" TEXT,
     "email" TEXT NOT NULL,
     "PhoneNumber" TEXT,
     "passwordHash" TEXT,
-    "firstName" TEXT NOT NULL,
+    "firstName" TEXT,
     "lastName" TEXT,
     "googleId" TEXT,
-    "profilePictureUrl" TEXT NOT NULL,
+    "profilePictureUrl" TEXT,
     "headline" TEXT,
     "location" TEXT,
-    "bio" TEXT,
+    "Gender" TEXT,
+    "Skills" TEXT[],
+    "Interests" TEXT[],
+    "workorProject" TEXT,
+    "About" TEXT,
     "college" TEXT,
     "degree" TEXT,
     "startYear" INTEGER,
@@ -20,6 +24,17 @@ CREATE TABLE "User" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Otp" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Otp_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -51,16 +66,6 @@ CREATE TABLE "Share" (
     "postId" TEXT NOT NULL,
 
     CONSTRAINT "Share_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "otp" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "code" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "otp_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -150,8 +155,8 @@ CREATE TABLE "Book" (
     "title" TEXT NOT NULL,
     "author" TEXT NOT NULL,
     "description" TEXT,
-    "coverUrl" TEXT NOT NULL,
-    "pdfUrl" TEXT NOT NULL,
+    "coverUrl" TEXT,
+    "pdfUrl" TEXT,
     "categoryId" TEXT NOT NULL,
     "views" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -236,6 +241,9 @@ CREATE INDEX "Bookmark_bookId_idx" ON "Bookmark"("bookId");
 CREATE INDEX "Bookmark_userId_idx" ON "Bookmark"("userId");
 
 -- AddForeignKey
+ALTER TABLE "Otp" ADD CONSTRAINT "Otp_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Comments" ADD CONSTRAINT "Comments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -252,9 +260,6 @@ ALTER TABLE "Share" ADD CONSTRAINT "Share_userId_fkey" FOREIGN KEY ("userId") RE
 
 -- AddForeignKey
 ALTER TABLE "Share" ADD CONSTRAINT "Share_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "otp" ADD CONSTRAINT "otp_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Post" ADD CONSTRAINT "Post_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

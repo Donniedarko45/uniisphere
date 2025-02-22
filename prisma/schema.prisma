@@ -9,7 +9,7 @@ datasource db {
 
 model User {
   id                String            @id @default(uuid())
-  username          String            @unique
+  username          String?           @unique
   email             String            @unique
   PhoneNumber       String?           @unique
   passwordHash      String?
@@ -19,7 +19,11 @@ model User {
   profilePictureUrl String?
   headline          String?
   location          String?
-  bio               String?
+  Gender            String?
+  Skills            String[]
+  Interests         String[]
+  workorProject     String?
+  About             String?
   college           String?
   degree            String?
   startYear         Int?
