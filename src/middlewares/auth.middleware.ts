@@ -32,3 +32,17 @@ export const authenticate = (
     return next(error);
   }
 };
+
+export const verifyUser = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  const requestedUserId = req.body.userId || req.params.userId;
+  
+  if (requestedUserId && requestedUserId !== req.userId) {
+    return next(new Error("Unauthorized: Cannot perform actions for other users"));
+  }
+  
+  return next();
+};

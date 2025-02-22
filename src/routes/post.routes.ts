@@ -7,7 +7,7 @@ import {
   getPost,
   getUserPosts,
 } from "../controllers/post.controller";
-import { authenticate } from "../middlewares/auth.middleware";
+import { authenticate, verifyUser } from "../middlewares/auth.middleware";
 import { getFeed } from "../controllers/feed.controller";
 
 const router = Router();
@@ -16,9 +16,10 @@ const router = Router();
 router.get("/:postId", getPost as any);
 
 // Protected routes
-router.post("/", authenticate, upload.single("media"), createPost);
-router.put("/:postId", authenticate, updatePost);
-router.delete("/:postId", authenticate, deletePost);
+router.post("/", authenticate, verifyUser, upload.single("media"), createPost);
+router.put("/:postId", authenticate, verifyUser, updatePost);
+router.delete("/:postId", authenticate, verifyUser, deletePost);
 router.get("/user/:userId", authenticate, getUserPosts);
 router.get("/getFeed", authenticate, getFeed);
+
 export default router;

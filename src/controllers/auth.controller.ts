@@ -8,7 +8,6 @@ import crypto from "crypto";
 import passport from "passport";
 
 dotenv.config();
-//hiii
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
