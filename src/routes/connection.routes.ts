@@ -3,7 +3,6 @@ import { Router } from "express";
 import { acceptConnection, declineConnection, getConnections, sendConnectionRequest } from "../controllers/connection.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 
-
 const app = express();
 const router = Router();
 

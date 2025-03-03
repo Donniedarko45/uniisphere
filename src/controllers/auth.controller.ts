@@ -265,17 +265,8 @@ export const verifyOtp = async (
       endYear,
     } = req.body;
 
-    // Delete expired OTPs
-    await prisma.otp.deleteMany({
-      where: {
-        email,
-        expiresAt: { lt: new Date() }, // Delete expired OTPs before verification
-      },
-    });
-
-    // Check OTP
     const otpRecord = await prisma.otp.findFirst({
-      where: { email, code: otp },
+      where: { user: { email }, code: otp },
       orderBy: { createdAt: "desc" },
     });
 
@@ -287,22 +278,11 @@ export const verifyOtp = async (
       return res.status(400).json({ error: "OTP expired. Request a new OTP" });
     }
 
-    // Delete OTP after verification
     await prisma.otp.delete({ where: { id: otpRecord.id } });
-
-    // Check if user is already verified
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser?.verified) {
-      return res.status(400).json({ error: "Email already registered" });
-    }
-
-    // Hash Password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create or update user
-    const updatedUser = await prisma.user.upsert({
+    const updatedUser = await prisma.user.update({
       where: { email },
-      update: {
+      data: {
         firstName,
         lastName,
         passwordHash: hashedPassword,
@@ -320,39 +300,15 @@ export const verifyOtp = async (
         degree,
         startYear,
         endYear,
-        verified: true, // Mark as verified after OTP
-      },
-      create: {
-        email,
-        firstName,
-        lastName,
-        passwordHash: hashedPassword,
-        PhoneNumber,
-        profilePictureUrl: profilePictureUrl || "",
-        location,
-        About,
-        headline,
-        username,
-        Gender,
-        workorProject,
-        Interests,
-        Skills,
-        college,
-        degree,
-        startYear,
-        endYear,
-        verified: true,
       },
     });
 
-    // Generate Token
     const token = generateToken(updatedUser.id);
     res.status(201).json({ token, user: updatedUser });
   } catch (error) {
     return next(error);
   }
 };
-
 export const login = async (
   req: Request,
   res: Response,
