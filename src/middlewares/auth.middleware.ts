@@ -17,10 +17,10 @@ export const authenticate = (
   }
 
   const token = authHeader.split(" ")[1];
-
+  console.log("token extraction" + token);
   try {
     const decoded = verifyToken(token);
-
+    console.log("decoded token is " + decoded);
     if (!decoded || !decoded.userId) {
       return next(new Error("Invalid token"));
     }
@@ -39,10 +39,12 @@ export const verifyUser = (
   next: NextFunction,
 ) => {
   const requestedUserId = req.body.userId || req.params.userId;
-  
+
   if (requestedUserId && requestedUserId !== req.userId) {
-    return next(new Error("Unauthorized: Cannot perform actions for other users"));
+    return next(
+      new Error("Unauthorized: Cannot perform actions for other users"),
+    );
   }
-  
+
   return next();
 };
