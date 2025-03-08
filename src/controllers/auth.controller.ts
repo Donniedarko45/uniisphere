@@ -1,11 +1,11 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import dotenv from "dotenv";
 import { NextFunction, Request, Response } from "express";
+import nodemailer from "nodemailer";
+import passport from "passport";
 import prisma from "../config/prisma";
 import { generateToken } from "../utils/jwt.utils";
-import nodemailer from "nodemailer";
-import dotenv from "dotenv";
-import crypto from "crypto";
-import passport from "passport";
 
 dotenv.config();
 const transporter = nodemailer.createTransport({
@@ -49,10 +49,13 @@ export const register = async (
   try {
     const { email, username } = req.body;
 
+    // Check for existing verified user
     const existingUser = await prisma.user.findFirst({
       where: {
-        email,
-        username
+        OR: [
+          { email, verified: true },
+          { username }
+        ]
       },
     });
 
@@ -65,12 +68,26 @@ export const register = async (
       });
     }
 
+    // Delete any existing unverified user with this email
+    await prisma.user.deleteMany({
+      where: {
+        email,
+        verified: false,
+      },
+    });
+
     const otp = crypto.randomInt(100000, 999999).toString();
     const tempUser = await prisma.user.create({
       data: {
         email,
       },
     });
+    
+    // Delete any existing OTPs for this user
+    await prisma.otp.deleteMany({
+      where: { userId: tempUser.id },
+    });
+
     await prisma.otp.create({
       data: {
         userId: tempUser.id,
@@ -78,6 +95,7 @@ export const register = async (
         expiresAt: new Date(Date.now() + 5 * 60 * 1000),
       },
     });
+
     await sendOtp(email, otp);
     res.status(200).json({ message: "OTP sent to your email" });
   } catch (error) {
