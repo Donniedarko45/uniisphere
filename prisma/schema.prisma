@@ -43,7 +43,6 @@ model User {
   UserActivity      UserActivity[]
   Share             Share[]
   Comments          Comments[]
-  verified          String
   Likes             Likes[]
   CloudinaryMedia   CloudinaryMedia[]
 }
