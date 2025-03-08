@@ -74,7 +74,7 @@ export const getUserPosts = async (req: Request, res: Response, next: NextFuncti
   const { UserId } = req.params;
   try {
     const posts = await prisma.post.findMany({
-      where: { userId: UserId },
+      where: { id: UserId },
     });
     res.status(200).json({ posts });
   } catch (error) {

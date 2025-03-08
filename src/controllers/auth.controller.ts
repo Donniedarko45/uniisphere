@@ -16,159 +16,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const skills = [
-  "Web Development",
-  "WordPress",
-  "Python",
-  "Java",
-  "C++",
-  "App Development",
-  "Software Testing",
-  "Data Analytics",
-  "SQL",
-  "Cloud Computing",
-  "Cybersecurity",
-  "Blockchain",
-  "AI/ML",
-  "AR/VR",
-  "IoT",
-  "Automation",
-  "Game Development",
-  "Web Scraping",
-  "API Development",
-  "Chatbot Development",
-  "Graphic Design",
-  "UI/UX",
-  "Animation",
-  "Video Editing",
-  "3D Modeling",
-  "Logo Design",
-  "Infographics",
-  "Typography",
-  "NFT Art",
-  "Interior Design",
-  "Content Writing",
-  "Copywriting",
-  "Technical Writing",
-  "Ghostwriting",
-  "Resume Writing",
-  "Scriptwriting",
-  "Blogging",
-  "Research Writing",
-  "Translation",
-  "Transcription",
-  "Speech Writing",
-  "Social Media",
-  "SEO",
-  "Email Marketing",
-  "Ads Management",
-  "Affiliate Marketing",
-  "Influencer Marketing",
-  "PR",
-  "Market Research",
-  "Lead Generation",
-  "Growth Hacking",
-  "Accounting",
-  "Financial Analysis",
-  "Stock Trading",
-  "Cryptocurrency",
-  "Tax Filing",
-  "Budgeting",
-  "Crowdfunding",
-  "Business Valuation",
-  "Investment Analysis",
-  "Risk Management",
-  "Public Speaking",
-  "Negotiation",
-  "Conflict Resolution",
-  "Time Management",
-  "Leadership",
-  "Networking",
-  "Emotional Intelligence",
-  "Personal Branding",
-  "Interviewing",
-  "Problem-Solving",
-  "Online Tutoring",
-  "Language Teaching",
-  "Music Lessons",
-  "Fitness Training",
-  "Life Coaching",
-  "Career Counseling",
-  "Exam Coaching",
-  "Yoga",
-  "Personal Development",
-  "Skill Training",
-  "Virtual Assistance",
-  "Data Entry",
-  "Email Management",
-  "Customer Support",
-  "Travel Planning",
-  "Project Management",
-  "Event Planning",
-  "Document Formatting",
-  "CRM Management",
-  "E-commerce",
-  "Dropshipping",
-  "Product Listing",
-  "Sales Funnels",
-  "Print-on-Demand",
-  "B2B Sales",
-  "Customer Retention",
-  "Online Courses",
-  "Subscription Business",
-  "Retail Management",
-  "Podcasting",
-  "Voiceover",
-  "Photography",
-  "Freelance Writing",
-  "Handmade Crafts",
-  "Car Maintenance",
-  "Home Repair",
-  "Cooking",
-  "Nutrition",
-  "First Aid",
-  "Emergency Preparedness",
-  "Gardening",
-  "Public Transport Navigation",
-  "Apartment Hunting",
-  "Resume Optimization",
-  "Personal Finance",
-  "Stress Management",
-  "Meditation",
-  "Relationship Building",
-  "Workplace Communication",
-  "Professional Dressing",
-  "Job Search",
-  "Business Proposal",
-  "Legal Knowledge",
-  "Debt Management",
-  "Stock Photography",
-  "Virtual Reality Content",
-  "3D Printing",
-  "Ethical Hacking",
-  "Cloud Security",
-  "Copyediting",
-  "Data Visualization",
-  "Business Consulting",
-  "HR Management",
-  "Podcast Editing",
-  "Mobile Repair",
-  "Digital Illustration",
-  "App Monetization",
-  "Video Marketing",
-  "Email Copywriting",
-  "Digital Fundraising",
-  "Dance Choreography",
-  "DIY Home Decor",
-  "Resume Designing",
-  "Smart Home Setup",
-  "Google Analytics",
-  "Social Media Ads",
-  "Public Relations Writing",
-  "Proofreading",
-  "Voice Modulation",
-];
-
 const sendOtp = async (email: string, otp: string) => {
   try {
     const mailOptions = {
@@ -200,11 +47,12 @@ export const register = async (
   next: NextFunction,
 ): Promise<any> => {
   try {
-    const { email } = req.body;
+    const { email, username } = req.body;
 
     const existingUser = await prisma.user.findFirst({
       where: {
         email,
+        username
       },
     });
 
@@ -265,8 +113,24 @@ export const verifyOtp = async (
       endYear,
     } = req.body;
 
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: "User not found" });
+    }
+
+    await prisma.otp.deleteMany({
+      where: {
+        userId: user.id,
+        expiresAt: { lt: new Date() },
+      },
+    });
+
+    // Check OTP
     const otpRecord = await prisma.otp.findFirst({
-      where: { user: { email }, code: otp },
+      where: { userId: user.id, code: otp },
       orderBy: { createdAt: "desc" },
     });
 
@@ -279,10 +143,17 @@ export const verifyOtp = async (
     }
 
     await prisma.otp.delete({ where: { id: otpRecord.id } });
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser?.verified) {
+      return res.status(400).json({ error: "Email already registered" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const updatedUser = await prisma.user.update({
+
+    const updatedUser = await prisma.user.upsert({
       where: { email },
-      data: {
+      update: {
         firstName,
         lastName,
         passwordHash: hashedPassword,
@@ -300,6 +171,28 @@ export const verifyOtp = async (
         degree,
         startYear,
         endYear,
+        verified: true,
+      },
+      create: {
+        email,
+        firstName,
+        lastName,
+        passwordHash: hashedPassword,
+        PhoneNumber,
+        profilePictureUrl: profilePictureUrl || "",
+        location,
+        About,
+        headline,
+        username,
+        Gender,
+        workorProject,
+        Interests,
+        Skills,
+        college,
+        degree,
+        startYear,
+        endYear,
+        verified: true,
       },
     });
 
@@ -309,6 +202,7 @@ export const verifyOtp = async (
     return next(error);
   }
 };
+
 export const login = async (
   req: Request,
   res: Response,
