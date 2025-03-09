@@ -1,12 +1,12 @@
-import express from "express";
-import dotenv from "dotenv";
-import http from "http";
 import cors from "cors";
-import { setupSocket } from "./utils/socket";
-import authRoutes from "./routes/auth.routes";
-import postRoutes from "./routes/post.routes";
-import feedRoutes from "./routes/feed.routes";
+import dotenv from "dotenv";
+import express from "express";
+import http from "http";
 import { getProfile } from "./controllers/user.controller";
+import authRoutes from "./routes/auth.routes";
+import feedRoutes from "./routes/feed.routes";
+import postRoutes from "./routes/post.routes";
+import { setupSocket } from "./utils/socket";
 dotenv.config();
 const app = express();
 app.use(
@@ -26,4 +26,4 @@ app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/posts", postRoutes);
 app.use("/getProfile", getProfile);
-app.use("/", feedRoutes);
+app.use("/api", feedRoutes); // Mount feed routes under /api prefix

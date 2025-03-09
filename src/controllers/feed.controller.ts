@@ -49,7 +49,7 @@ export const getFeed = async (
           {
             AND: [
               { visibility: "public" },
-              { tags: { hasSome: user?.Interests || [] } }, // Posts matching user interests
+              { tags: { hasSome: user?.Interests || [] } },
             ],
           },
         ],
