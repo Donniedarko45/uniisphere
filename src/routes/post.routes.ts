@@ -1,25 +1,63 @@
 import { Router } from "express";
-import { upload } from "../middlewares/upload.middleware";
+import { getFeed } from "../controllers/feed.controller";
 import {
+  createComment,
   createPost,
-  updatePost,
   deletePost,
   getPost,
   getUserPosts,
+  likePost,
+  unlikePost,
+  updatePost,
 } from "../controllers/post.controller";
 import { authenticate, verifyUser } from "../middlewares/auth.middleware";
-import { getFeed } from "../controllers/feed.controller";
+import { upload } from "../middlewares/upload.middleware";
 
 const router = Router();
 
-// Public routes (no authentication needed)
+// Public routes
 router.get("/:postId", getPost as any);
 
-// Protected routes
-router.post("/", authenticate, verifyUser, upload.single("media"), createPost);
-router.put("/:postId", authenticate, verifyUser, updatePost);
-router.delete("/:postId", authenticate, verifyUser, deletePost);
+// Protected routes - Feed
+router.get("/feed", authenticate, getFeed);
+
+// Protected routes - User specific 
 router.get("/user/:userId", authenticate, getUserPosts);
-router.get("/getFeed", authenticate, getFeed);
+
+// Protected routes - Post operations
+router.post("/", 
+  authenticate, 
+  verifyUser, 
+  upload.single("media"),
+  createPost
+);
+
+router.put("/:postId", 
+  authenticate, 
+  verifyUser,
+  updatePost
+);
+
+router.delete("/:postId", 
+  authenticate, 
+  verifyUser, 
+  deletePost
+);
+
+// Protected routes - Social interactions
+router.post("/:postId/comments",
+  authenticate,
+  createComment
+);
+
+router.post("/:postId/like",
+  authenticate,
+  likePost
+);
+
+router.delete("/:postId/like",
+  authenticate,
+  unlikePost
+);
 
 export default router;

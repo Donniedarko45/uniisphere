@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
 import prisma from "../config/prisma";
 
@@ -15,7 +16,6 @@ export const getFeed = async (
     const userId = req.userId;
     const pageSize = parseInt(limit as string) || 10;
 
-    // Get user's connections and interests
     const userNetwork = await prisma.connection.findMany({
       where: {
         OR: [
@@ -38,89 +38,82 @@ export const getFeed = async (
       .flatMap((conn) => [conn.userId1, conn.userId2])
       .filter((id) => id !== userId);
 
-    const baseQuery: any = {
+    const baseQuery: Prisma.PostFindManyArgs = {
       take: pageSize,
       skip: cursor ? 1 : 0,
       cursor: cursor ? { id: cursor as string } : undefined,
       where: {
-        OR: [
-          { userId: { in: connectedUserIds } }, // Posts from connections
-          { userId: userId }, // User's own posts
-          {
-            AND: [
-              { visibility: "public" },
-              { tags: { hasSome: user?.Interests || [] } },
-            ],
-          },
+      OR: [
+        { userId: { in: connectedUserIds } },
+        { userId },
+        {
+        AND: [
+          { visibility: "public" },
+          { tags: { hasSome: user?.Interests || [] } },
         ],
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            profilePictureUrl: true,
-            headline: true,
-          },
-        },
-        Comments: {
-          include: {
-            user: {
-              select: {
-                username: true,
-                profilePictureUrl: true,
-              },
-            },
-          },
-          take: 3,
-          orderBy: { createdAt: "desc" },
-        },
-        Likes: true,
-        _count: {
-          select: {
-            Comments: true,
-            Likes: true,
-            Share: true,
-          },
-        },
-      },
-      orderBy: [
-        {
-          createdAt: "desc",
-        },
-        {
-          _count: {
-            Likes: "desc",
-          },
         },
       ],
+      },
+      include: {
+      user: {
+        select: {
+        id: true,
+        username: true,
+        profilePictureUrl: true,
+        headline: true,
+        },
+      },
+      Comments: {
+        include: {
+        user: {
+          select: {
+          username: true,
+          profilePictureUrl: true,
+          },
+        },
+        },
+        take: 3,
+        orderBy: {
+        createdAt: "desc"
+        },
+      },
+      Likes: true,
+      _count: {
+        select: {
+        Comments: true,
+        Likes: true,
+        Share: true,
+        },
+      },
+      },
+      orderBy: filter === "trending" 
+      ? {
+        Likes: {
+          _count: "desc"
+        }
+        }
+      : { createdAt: "desc" },
     };
-
-    // Apply additional filters if specified
-    if (filter === "trending") {
-      baseQuery.orderBy = [
-        { _count: { Likes: "desc" } },
-        { _count: { Comments: "desc" } },
-        { createdAt: "desc" },
-      ];
-    }
 
     const posts = await prisma.post.findMany(baseQuery);
 
-    // Calculate engagement score for each post
     const postsWithEngagement = posts.map((post: any) => {
-      const engagementScore =
-        (post._count?.Likes || 0) * 1 +
-        (post._count?.Comments || 0) * 2 +
-        (post._count?.Share || 0) * 3;
+      const likesCount = post.Likes?.length || 0;
+      const commentsCount = post._count?.Comments || 0;
+      const sharesCount = post._count?.Share || 0;
+
+      const engagementScore = 
+        likesCount * 1 +
+        commentsCount * 2 + 
+        sharesCount * 3;
 
       return {
         ...post,
         engagementScore,
-        commentPreview: post.Comments.slice(0, 3),
-        totalComments: post._count?.Comments || 0,
-        totalLikes: post._count?.Likes || 0,
-        totalShares: post._count?.Share || 0,
+        commentPreview: post.Comments?.slice(0, 3) || [],
+        totalComments: commentsCount,
+        totalLikes: likesCount,
+        totalShares: sharesCount,
       };
     });
 

@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { NextFunction, Request, Response } from "express";
 import prisma from "../config/prisma";
 import cloudinary from "../utils/cloudinary";
 
@@ -77,6 +77,72 @@ export const getUserPosts = async (req: Request, res: Response, next: NextFuncti
       where: { id: UserId },
     });
     res.status(200).json({ posts });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createComment = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { postId } = req.params;
+    const { content } = req.body;
+    const userId = (req as any).userId;
+
+    const comment = await prisma.comments.create({
+      data: {
+        content,
+        userId,
+        postId,
+      },
+      include: {
+        user: {
+          select: {
+            username: true,
+            profilePictureUrl: true
+          }
+        }
+      }
+    });
+
+    res.status(201).json(comment);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const likePost = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { postId } = req.params;
+    const userId = (req as any).userId;
+
+    const like = await prisma.likes.create({
+      data: {
+        userId,
+        postId,
+      }
+    });
+
+    res.status(201).json(like);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const unlikePost = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { postId } = req.params;
+    const userId = (req as any).userId;
+
+    await prisma.likes.delete({
+      where: {
+        userId_postId: {
+          userId,
+          postId
+        }
+      }
+    });
+
+    res.status(200).json({ message: "Post unliked successfully" });
   } catch (error) {
     next(error);
   }
