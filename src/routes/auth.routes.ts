@@ -1,21 +1,23 @@
-import { Router, RequestHandler } from "express";
+import { Router } from "express";
 import {
-  login,
-  register,
+  completeProfile // Add this import
+  ,
   googleAuth,
   googleAuthCallback,
-  verifyOtp,
-  resendOtp
+  login,
+  register,
+  resendOtp,
+  verifyOtp
 } from "../controllers/auth.controller";
 
 const router = Router();
 
 router.post("/register", register);
 router.post("/login", login);
-router.post("/oauth/google", googleAuth);
 router.post("/verifyOtp", verifyOtp);
-router.post("/resendOtp", resendOtp); 
-
+router.post("/completeProfile", completeProfile); // Add new route
+router.post("/resendOtp", resendOtp);
+router.post("/oauth/google", googleAuth);
 router.get('/google', googleAuth);
 router.get('/google/callback', googleAuthCallback);
 

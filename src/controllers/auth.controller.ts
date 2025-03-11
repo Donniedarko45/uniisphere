@@ -34,13 +34,6 @@ const sendOtp = async (email: string, otp: string) => {
   }
 };
 
-/*
- *
- *to fix things=> when I am trying to post something, suppose i am kartikey(userid-1) and you are adarsh(userid-2) and when I(Kartikey) logged into the system I got some jwt token . so what I(Kartikey) is doing that he is posting something with passing userid-2 which is of adarsh id and with jwt token of himself he can successfully posting posts from account-2 dont know why it is happening
- *
- *
- */
-
 export const register = async (
   req: Request,
   res: Response,
@@ -117,15 +110,67 @@ export const register = async (
   }
 };
 
+// Update verifyOtp to only handle OTP verification
 export const verifyOtp = async (
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
+): Promise<any> => {
+  try {
+    const { email, otp } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: "User not found" });
+    }
+
+    // Delete expired OTPs
+    await prisma.otp.deleteMany({
+      where: {
+        userId: user.id,
+        expiresAt: { lt: new Date() }
+      }
+    });
+
+    const otpRecord = await prisma.otp.findFirst({
+      where: { userId: user.id, code: otp },
+      orderBy: { createdAt: "desc" }
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
+
+    if (new Date() > otpRecord.expiresAt) {
+      return res.status(400).json({ error: "OTP expired. Request a new OTP" });
+    }
+
+    await prisma.otp.delete({ where: { id: otpRecord.id } });
+
+    // Return temporary token for completing profile
+    const tempToken = generateToken(user.id);
+    res.status(200).json({
+      message: "OTP verified successfully",
+      tempToken
+    });
+
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// Add new route to complete profile after OTP verification
+export const completeProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
 ): Promise<any> => {
   try {
     const {
       email,
-      otp,
       username,
       firstName,
       lastName,
@@ -145,6 +190,7 @@ export const verifyOtp = async (
       endYear,
     } = req.body;
 
+    // Validate password
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
@@ -152,46 +198,22 @@ export const verifyOtp = async (
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
+    const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
       return res.status(400).json({ error: "User not found" });
     }
 
-    await prisma.otp.deleteMany({
-      where: {
-        userId: user.id,
-        expiresAt: { lt: new Date() },
-      },
-    });
-
-    const otpRecord = await prisma.otp.findFirst({
-      where: { userId: user.id, code: otp },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (!otpRecord) {
-      return res.status(400).json({ error: "Invalid OTP" });
-    }
-
-    if (new Date() > otpRecord.expiresAt) {
-      return res.status(400).json({ error: "OTP expired. Request a new OTP" });
-    }
-
-    await prisma.otp.delete({ where: { id: otpRecord.id } });
-
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser?.verified) {
-      return res.status(400).json({ error: "Email already registered" });
+    if (user.verified) {
+      return res.status(400).json({ error: "User already verified" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const updatedUser = await prisma.user.upsert({
+    const updatedUser = await prisma.user.update({
       where: { email },
-      update: {
+      data: {
+        username,
         firstName,
         lastName,
         passwordHash: hashedPassword,
@@ -200,7 +222,6 @@ export const verifyOtp = async (
         location,
         About,
         headline,
-        username,
         Gender,
         workorProject,
         Interests,
@@ -210,32 +231,16 @@ export const verifyOtp = async (
         startYear,
         endYear,
         verified: true,
-      },
-      create: {
-        email,
-        firstName,
-        lastName,
-        passwordHash: hashedPassword,
-        PhoneNumber,
-        profilePictureUrl: profilePictureUrl || "",
-        location,
-        About,
-        headline,
-        username,
-        Gender,
-        workorProject,
-        Interests,
-        Skills,
-        college,
-        degree,
-        startYear,
-        endYear,
-        verified: true,
-      },
+      }
     });
 
     const token = generateToken(updatedUser.id);
-    res.status(201).json({ token, user: updatedUser });
+    res.status(200).json({
+      message: "Profile completed successfully",
+      token,
+      user: updatedUser
+    });
+
   } catch (error) {
     return next(error);
   }
