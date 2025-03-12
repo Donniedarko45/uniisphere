@@ -112,7 +112,7 @@ export const register = async (
 
 // Update verifyOtp to only handle OTP verification
 export const verifyOtp = async (
-  req: Request, 
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<any> => {
@@ -152,7 +152,7 @@ export const verifyOtp = async (
 
     // Return temporary token for completing profile
     const tempToken = generateToken(user.id);
-    res.status(200).json({ 
+    res.status(200).json({
       message: "OTP verified successfully",
       tempToken
     });
@@ -165,7 +165,7 @@ export const verifyOtp = async (
 // Add new route to complete profile after OTP verification
 export const completeProfile = async (
   req: Request,
-  res: Response, 
+  res: Response,
   next: NextFunction
 ): Promise<any> => {
   try {
@@ -199,7 +199,7 @@ export const completeProfile = async (
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
-    
+
     if (!user) {
       return res.status(400).json({ error: "User not found" });
     }
@@ -235,10 +235,10 @@ export const completeProfile = async (
     });
 
     const token = generateToken(updatedUser.id);
-    res.status(200).json({ 
+    res.status(200).json({
       message: "Profile completed successfully",
       token,
-      user: updatedUser 
+      user: updatedUser
     });
 
   } catch (error) {
@@ -364,7 +364,7 @@ export const resendOtp = async (
 
 export const forgotPassword = async (
   req: Request,
-  res: Response, 
+  res: Response,
   next: NextFunction
 ): Promise<any> => {
   try {
@@ -408,7 +408,7 @@ export const forgotPassword = async (
 export const resetPassword = async (
   req: Request,
   res: Response,
-  next: NextFunction  
+  next: NextFunction
 ): Promise<any> => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -438,7 +438,7 @@ export const resetPassword = async (
     });
 
     const otpRecord = await prisma.otp.findFirst({
-      where: { 
+      where: {
         userId: user.id,
         code: otp
       },
