@@ -42,13 +42,11 @@ export const register = async (
   try {
     const { email, username } = req.body;
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ error: "Invalid email format" });
     }
 
-    // Validate username format
     const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
     if (!usernameRegex.test(username)) {
       return res.status(400).json({
@@ -56,7 +54,6 @@ export const register = async (
       });
     }
 
-    // Check for existing verified user
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
@@ -75,7 +72,6 @@ export const register = async (
       });
     }
 
-    // Delete any existing unverified user with this email
     await prisma.user.deleteMany({
       where: {
         email,
@@ -90,7 +86,6 @@ export const register = async (
       },
     });
 
-    // Delete any existing OTPs for this user
     await prisma.otp.deleteMany({
       where: { userId: tempUser.id },
     });
@@ -110,7 +105,6 @@ export const register = async (
   }
 };
 
-// Update verifyOtp to only handle OTP verification
 export const verifyOtp = async (
   req: Request,
   res: Response,
@@ -127,7 +121,6 @@ export const verifyOtp = async (
       return res.status(400).json({ error: "User not found" });
     }
 
-    // Delete expired OTPs
     await prisma.otp.deleteMany({
       where: {
         userId: user.id,
@@ -150,7 +143,6 @@ export const verifyOtp = async (
 
     await prisma.otp.delete({ where: { id: otpRecord.id } });
 
-    // Return temporary token for completing profile
     const tempToken = generateToken(user.id);
     res.status(200).json({
       message: "OTP verified successfully",
@@ -162,7 +154,6 @@ export const verifyOtp = async (
   }
 };
 
-// Add new route to complete profile after OTP verification
 export const completeProfile = async (
   req: Request,
   res: Response,
@@ -190,7 +181,6 @@ export const completeProfile = async (
       endYear,
     } = req.body;
 
-    // Validate password
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
@@ -413,11 +403,28 @@ export const resetPassword = async (
   try {
     const { email, otp, newPassword } = req.body;
 
-    // Validate password
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(newPassword)) {
+    // Updated password validation with clearer regex and error messages
+    const passwordValidation = {
+      minLength: newPassword.length >= 8,
+      hasUpper: /[A-Z]/.test(newPassword),
+      hasLower: /[a-z]/.test(newPassword),
+      hasNumber: /\d/.test(newPassword),
+      hasSpecial: /[@$!%*?&#]/.test(newPassword)
+    };
+
+    if (!Object.values(passwordValidation).every(Boolean)) {
       return res.status(400).json({
-        error: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character"
+        error: "Password requirements not met",
+        requirements: {
+          minLength: "Minimum 8 characters",
+          hasUpper: "At least one uppercase letter",
+          hasLower: "At least one lowercase letter",
+          hasNumber: "At least one number",
+          hasSpecial: "At least one special character (@$!%*?&#)",
+        },
+        failed: Object.entries(passwordValidation)
+          .filter(([_, valid]) => !valid)
+          .map(([key]) => key)
       });
     }
 
