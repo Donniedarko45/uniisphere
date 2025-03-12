@@ -112,7 +112,7 @@ export const register = async (
 
 // Update verifyOtp to only handle OTP verification
 export const verifyOtp = async (
-  req: Request,
+  req: Request, 
   res: Response,
   next: NextFunction
 ): Promise<any> => {
@@ -152,7 +152,7 @@ export const verifyOtp = async (
 
     // Return temporary token for completing profile
     const tempToken = generateToken(user.id);
-    res.status(200).json({
+    res.status(200).json({ 
       message: "OTP verified successfully",
       tempToken
     });
@@ -165,7 +165,7 @@ export const verifyOtp = async (
 // Add new route to complete profile after OTP verification
 export const completeProfile = async (
   req: Request,
-  res: Response,
+  res: Response, 
   next: NextFunction
 ): Promise<any> => {
   try {
@@ -199,7 +199,7 @@ export const completeProfile = async (
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
-
+    
     if (!user) {
       return res.status(400).json({ error: "User not found" });
     }
@@ -235,10 +235,10 @@ export const completeProfile = async (
     });
 
     const token = generateToken(updatedUser.id);
-    res.status(200).json({
+    res.status(200).json({ 
       message: "Profile completed successfully",
       token,
-      user: updatedUser
+      user: updatedUser 
     });
 
   } catch (error) {
@@ -357,5 +357,121 @@ export const resendOtp = async (
     });
   } catch (error) {
     next(error);
+  }
+};
+
+// Add these new controller functions
+
+export const forgotPassword = async (
+  req: Request,
+  res: Response, 
+  next: NextFunction
+): Promise<any> => {
+  try {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Delete any existing OTPs
+    await prisma.otp.deleteMany({
+      where: { userId: user.id }
+    });
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+
+    await prisma.otp.create({
+      data: {
+        userId: user.id,
+        code: otp,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes expiry
+      }
+    });
+
+    await sendOtp(email, otp);
+
+    res.status(200).json({
+      message: "Password reset OTP sent to your email",
+      expiresIn: "5 minutes"
+    });
+
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction  
+): Promise<any> => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    // Validate password
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        error: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character"
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Delete expired OTPs
+    await prisma.otp.deleteMany({
+      where: {
+        userId: user.id,
+        expiresAt: { lt: new Date() }
+      }
+    });
+
+    const otpRecord = await prisma.otp.findFirst({
+      where: { 
+        userId: user.id,
+        code: otp
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
+
+    if (new Date() > otpRecord.expiresAt) {
+      return res.status(400).json({ error: "OTP expired. Request a new OTP" });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: hashedPassword }
+    });
+
+    // Delete used OTP
+    await prisma.otp.delete({
+      where: { id: otpRecord.id }
+    });
+
+    res.status(200).json({
+      message: "Password reset successful"
+    });
+
+  } catch (error) {
+    return next(error);
   }
 };

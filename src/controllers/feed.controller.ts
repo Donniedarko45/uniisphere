@@ -43,56 +43,56 @@ export const getFeed = async (
       skip: cursor ? 1 : 0,
       cursor: cursor ? { id: cursor as string } : undefined,
       where: {
-      OR: [
-        { userId: { in: connectedUserIds } },
-        { userId },
-        {
-        AND: [
-          { visibility: "public" },
-          { tags: { hasSome: user?.Interests || [] } },
+        OR: [
+          { userId: { in: connectedUserIds } },
+          { userId },
+          {
+            AND: [
+              { visibility: "public" },
+              { tags: { hasSome: user?.Interests || [] } },
+            ],
+          },
         ],
-        },
-      ],
       },
       include: {
-      user: {
-        select: {
-        id: true,
-        username: true,
-        profilePictureUrl: true,
-        headline: true,
-        },
-      },
-      Comments: {
-        include: {
         user: {
           select: {
-          username: true,
-          profilePictureUrl: true,
+            id: true,
+            username: true,
+            profilePictureUrl: true,
+            headline: true,
           },
         },
+        Comments: {
+          include: {
+            user: {
+              select: {
+                username: true,
+                profilePictureUrl: true,
+              },
+            },
+          },
+          take: 3,
+          orderBy: {
+            createdAt: "desc"
+          },
         },
-        take: 3,
-        orderBy: {
-        createdAt: "desc"
-        },
-      },
-      Likes: true,
-      _count: {
-        select: {
-        Comments: true,
         Likes: true,
-        Share: true,
+        _count: {
+          select: {
+            Comments: true,
+            Likes: true,
+            Share: true,
+          },
         },
       },
-      },
-      orderBy: filter === "trending" 
-      ? {
-        Likes: {
-          _count: "desc"
+      orderBy: filter === "trending"
+        ? {
+          Likes: {
+            _count: "desc"
+          }
         }
-        }
-      : { createdAt: "desc" },
+        : { createdAt: "desc" },
     };
 
     const posts = await prisma.post.findMany(baseQuery);
@@ -102,9 +102,9 @@ export const getFeed = async (
       const commentsCount = post._count?.Comments || 0;
       const sharesCount = post._count?.Share || 0;
 
-      const engagementScore = 
+      const engagementScore =
         likesCount * 1 +
-        commentsCount * 2 + 
+        commentsCount * 2 +
         sharesCount * 3;
 
       return {
