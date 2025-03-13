@@ -4,6 +4,7 @@ import express from "express";
 import http from "http";
 import { getProfile } from "./controllers/user.controller";
 import authRoutes from "./routes/auth.routes";
+import connectionRoutes from "./routes/connection.routes";
 import feedRoutes from "./routes/feed.routes";
 import postRoutes from "./routes/post.routes";
 import { setupSocket } from "./utils/socket";
@@ -23,6 +24,7 @@ server.listen(process.env.PORT || 5000, () => {
   console.log(`server running on port ${process.env.PORT || 5000}`);
 });
 app.use(express.json());
+app.use("/api/",connectionRoutes);
 app.use("/auth", authRoutes);
 app.use("/posts", postRoutes);
 app.use("/getProfile", getProfile);
