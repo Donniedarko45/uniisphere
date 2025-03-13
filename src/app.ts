@@ -24,7 +24,7 @@ server.listen(process.env.PORT || 5000, () => {
   console.log(`server running on port ${process.env.PORT || 5000}`);
 });
 app.use(express.json());
-app.use("/api/",connectionRoutes);
+app.use("/api",connectionRoutes);
 app.use("/auth", authRoutes);
 app.use("/posts", postRoutes);
 app.use("/getProfile", getProfile);
