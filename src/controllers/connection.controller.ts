@@ -65,20 +65,132 @@ export const declineConnection = async (req: Request, res: Response) => {
 
 // Get user's connections
 export const getConnections = async (req: Request, res: Response) => {
-  const userId = req.body.userId; // Extract from token
+  try {
+    const userId = req.body.userId;
 
-  const connections = await prisma.connection.findMany({
-    where: {
-      OR: [
-        { userId1: userId, status: "accepted" },
-        { userId2: userId, status: "accepted" },
-      ],
-    },
-    include: {
-      user1: true,
-      user2: true,
-    },
-  });
+    const [connections, stats] = await Promise.all([
+      // Get connections with user details
+      prisma.connection.findMany({
+        where: {
+          OR: [
+            { userId1: userId, status: "accepted" },
+            { userId2: userId, status: "accepted" },
+          ],
+        },
+        include: {
+          user1: {
+            select: {
+              id: true,
+              username: true,
+              profilePictureUrl: true,
+              headline: true
+            }
+          },
+          user2: {
+            select: {
+              id: true,
+              username: true,
+              profilePictureUrl: true,
+              headline: true
+            }
+          },
+        },
+      }),
 
-  res.status(200).json({ connections });
+      // Get connection stats
+      prisma.$transaction([
+        prisma.connection.count({
+          where: {
+            OR: [
+              { userId1: userId, status: "accepted" },
+              { userId2: userId, status: "accepted" }
+            ],
+          }
+        }),
+        prisma.connection.count({
+          where: {
+            userId2: userId,
+            status: "accepted"
+          }
+        }),
+        prisma.connection.count({
+          where: {
+            userId1: userId,
+            status: "accepted"
+          }
+        })
+      ])
+    ]);
+
+    const [totalConnections, followers, following] = stats;
+
+    res.status(200).json({
+      connections: connections.map(conn => ({
+        ...conn,
+        otherUser: conn.userId1 === userId ? conn.user2 : conn.user1
+      })),
+      stats: {
+        totalConnections,
+        followers,
+        following
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching connections:", error);
+    res.status(500).json({ error: "Failed to fetch connections" });
+  }
+};
+
+// Add this new function to get connection stats
+export const getConnectionStats = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.userId;
+
+    // Get total connections (accepted only)
+    const connectionsCount = await prisma.connection.count({
+      where: {
+        OR: [
+          { userId1: userId, status: "accepted" },
+          { userId2: userId, status: "accepted" }
+        ],
+      }
+    });
+
+    // Get followers (where this user is userId2)
+    const followersCount = await prisma.connection.count({
+      where: {
+        userId2: userId,
+        status: "accepted"
+      }
+    });
+
+    // Get following (where this user is userId1)
+    const followingCount = await prisma.connection.count({
+      where: {
+        userId1: userId,
+        status: "accepted"
+      }
+    });
+
+    // Get pending requests received
+    const pendingRequestsCount = await prisma.connection.count({
+      where: {
+        userId2: userId,
+        status: "pending"
+      }
+    });
+
+    res.status(200).json({
+      stats: {
+        totalConnections: connectionsCount,
+        followers: followersCount,
+        following: followingCount,
+        pendingRequests: pendingRequestsCount
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching connection stats:", error);
+    res.status(500).json({ error: "Failed to fetch connection statistics" });
+  }
 };
