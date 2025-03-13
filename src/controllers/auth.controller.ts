@@ -6,6 +6,8 @@ import nodemailer from "nodemailer";
 import passport from "passport";
 import prisma from "../config/prisma";
 import { generateToken } from "../utils/jwt.utils";
+import cloudinary from "../utils/cloudinary";
+
 
 dotenv.config();
 const transporter = nodemailer.createTransport({
@@ -171,7 +173,6 @@ export const completeProfile = async (
       password,
       PhoneNumber,
       location,
-      profilePictureUrl,
       college,
       headline,
       Gender,
@@ -184,13 +185,6 @@ export const completeProfile = async (
       endYear,
     } = req.body;
 
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(password)) {
-      return res.status(400).json({
-        error: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character"
-      });
-    }
-
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
@@ -198,6 +192,51 @@ export const completeProfile = async (
     }
 
     if (user.verified) {
+      return res.status(400).json({ error: "User already verified" });
+    }
+
+    let profilePictureUrl = "";
+
+    // Handle profile picture upload if file exists
+    if (req.file) {
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "profile_pictures",
+          transformation: [
+            { width: 500, height: 500, crop: "fill" },
+            { quality: "auto" }
+          ]
+        });
+        profilePictureUrl = result.secure_url;
+
+        // Store media info in CloudinaryMedia table
+        await prisma.cloudinaryMedia.create({
+          data: {
+            publicId: result.public_id,
+            url: result.secure_url,
+            resourceType: 'image',
+            userId: user.id
+          }
+        });
+      } catch (error) {
+        return res.status(400).json({ error: "Failed to upload profile picture" });
+      }
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        error: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character"
+      });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+
+    if (!existingUser) {
+      return res.status(400).json({ error: "User not found" });
+    }
+
+    if (existingUser.verified) {
       return res.status(400).json({ error: "User already verified" });
     }
 
@@ -211,7 +250,7 @@ export const completeProfile = async (
         lastName,
         passwordHash: hashedPassword,
         PhoneNumber,
-        profilePictureUrl: profilePictureUrl || "",
+        profilePictureUrl, // This will now be the Cloudinary URL
         location,
         About,
         headline,
