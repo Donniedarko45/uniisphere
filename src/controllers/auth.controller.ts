@@ -34,6 +34,9 @@ const sendOtp = async (email: string, otp: string) => {
   }
 };
 
+
+
+
 export const register = async (
   req: Request,
   res: Response,
