@@ -5,8 +5,8 @@ import { NextFunction, Request, Response } from "express";
 import nodemailer from "nodemailer";
 import passport from "passport";
 import prisma from "../config/prisma";
-import { generateToken } from "../utils/jwt.utils";
 import cloudinary from "../utils/cloudinary";
+import { generateToken } from "../utils/jwt.utils";
 
 
 dotenv.config();
@@ -183,6 +183,7 @@ export const completeProfile = async (
       workorProject,
       startYear,
       endYear,
+      profilePictureBase64, // Add this to accept base64 image
     } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
@@ -197,8 +198,9 @@ export const completeProfile = async (
 
     let profilePictureUrl = "";
 
-    // Handle profile picture upload if file exists
+    // Handle profile picture - check both file upload and base64 string
     if (req.file) {
+      // Existing file upload logic
       try {
         const result = await cloudinary.uploader.upload(req.file.path, {
           folder: "profile_pictures",
@@ -209,7 +211,6 @@ export const completeProfile = async (
         });
         profilePictureUrl = result.secure_url;
 
-        // Store media info in CloudinaryMedia table
         await prisma.cloudinaryMedia.create({
           data: {
             publicId: result.public_id,
@@ -219,6 +220,33 @@ export const completeProfile = async (
           }
         });
       } catch (error) {
+        return res.status(400).json({ error: "Failed to upload profile picture" });
+      }
+    } 
+    // Handle base64 image upload
+    else if (profilePictureBase64) {
+      try {
+        // Upload base64 image to Cloudinary
+        const result = await cloudinary.uploader.upload(profilePictureBase64, {
+          folder: "profile_pictures",
+          transformation: [
+            { width: 500, height: 500, crop: "fill" },
+            { quality: "auto" }
+          ]
+        });
+        
+        profilePictureUrl = result.secure_url;
+
+        await prisma.cloudinaryMedia.create({
+          data: {
+            publicId: result.public_id,
+            url: result.secure_url,
+            resourceType: 'image',
+            userId: user.id
+          }
+        });
+      } catch (error) {
+        console.error("Error uploading base64 image:", error);
         return res.status(400).json({ error: "Failed to upload profile picture" });
       }
     }
