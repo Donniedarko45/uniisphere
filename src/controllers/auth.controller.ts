@@ -222,11 +222,9 @@ export const completeProfile = async (
       } catch (error) {
         return res.status(400).json({ error: "Failed to upload profile picture" });
       }
-    } 
-    // Handle base64 image upload
+    }
     else if (profilePictureBase64) {
       try {
-        // Upload base64 image to Cloudinary
         const result = await cloudinary.uploader.upload(profilePictureBase64, {
           folder: "profile_pictures",
           transformation: [
@@ -234,7 +232,7 @@ export const completeProfile = async (
             { quality: "auto" }
           ]
         });
-        
+
         profilePictureUrl = result.secure_url;
 
         await prisma.cloudinaryMedia.create({
@@ -278,7 +276,7 @@ export const completeProfile = async (
         lastName,
         passwordHash: hashedPassword,
         PhoneNumber,
-        profilePictureUrl, // This will now be the Cloudinary URL
+        profilePictureUrl,
         location,
         About,
         headline,
