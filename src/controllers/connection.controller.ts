@@ -24,21 +24,23 @@ export const sendConnectionRequest = async (
       return res.status(400).json({ message: "Connection already exists" });
     }
 
-    await prisma.connection.create({
+    const newConnection = await prisma.connection.create({
       data: {
         userId1,
         userId2,
       },
     });
 
-    return res.status(201).json({ message: "Connection request sent" });
+    return res.status(201).json({
+      message: "Connection request sent",
+      connectionId: newConnection.id
+    });
   } catch (error) {
     console.error("Error sending connection request:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
-// Accept a connection request
 
 export const acceptConnection = async (req: Request, res: Response) => {
   const { connectionId } = req.params;
@@ -63,13 +65,11 @@ export const declineConnection = async (req: Request, res: Response) => {
   res.status(200).json({ message: "Connection declined" });
 };
 
-// Get user's connections
 export const getConnections = async (req: Request, res: Response) => {
   try {
     const userId = req.body.userId;
 
     const [connections, stats] = await Promise.all([
-      // Get connections with user details
       prisma.connection.findMany({
         where: {
           OR: [
