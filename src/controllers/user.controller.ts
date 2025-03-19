@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import prisma from "../config/prisma";
+import { use } from "passport";
 
 /*
  *
@@ -38,8 +39,16 @@ export const getProfile = async (
         lastName: true,
         location: true,
         About: true,
+        headline: true,
+        workorProject: true,
         college: true,
         email: true,
+        _count: {
+          select: {
+            connections1: true,
+            connections2: true
+          }
+        }
       },
     });
     if (!user) {
@@ -50,3 +59,19 @@ export const getProfile = async (
     console.error(next(err));
   }
 };
+
+
+
+
+export const updateProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<any> => {
+
+
+  const { userId } = req.body.userId;
+  const { headline, location, college, bio, firstName, lastName } = req.body;
+
+
+}
