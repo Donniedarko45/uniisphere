@@ -40,6 +40,7 @@ export const getProfile = async (
         location: true,
         About: true,
         headline: true,
+        profilePictureUrl: true,
         workorProject: true,
         college: true,
         email: true,
