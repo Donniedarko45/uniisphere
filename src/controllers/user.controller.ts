@@ -39,10 +39,13 @@ export const getProfile = async (
         lastName: true,
         location: true,
         About: true,
+        Skills: true,
+        Interests: true,
         headline: true,
         profilePictureUrl: true,
         workorProject: true,
         college: true,
+        degree: true,
         email: true,
         _count: {
           select: {
