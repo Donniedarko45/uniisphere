@@ -33,6 +33,7 @@ export const getProfile = async (
         ],
       },
       select: {
+        id: true,
         username: true,
         firstName: true,
         lastName: true,
@@ -72,8 +73,8 @@ export const updateProfile = async (
   next: NextFunction
 ): Promise<any> => {
   try {
-    const userId = req.body.userId; // Assuming this comes from auth middleware
-    
+    const userId = req.body.userId;
+
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -156,7 +157,7 @@ export const updateProfile = async (
             { quality: "auto" }
           ]
         });
-        
+
         profilePictureUrl = result.secure_url;
 
         await prisma.cloudinaryMedia.create({
@@ -176,7 +177,7 @@ export const updateProfile = async (
     }
 
     const updateData: any = {};
-    
+
     if (username !== undefined) updateData.username = username;
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
@@ -190,11 +191,11 @@ export const updateProfile = async (
     if (degree !== undefined) updateData.degree = degree;
     if (startYear !== undefined) updateData.startYear = startYear;
     if (endYear !== undefined) updateData.endYear = endYear;
-    
+
     // Arrays require special handling
     if (Skills !== undefined) updateData.Skills = Skills;
     if (Interests !== undefined) updateData.Interests = Interests;
-    
+
     // Check if profilePictureBase64 was provided at all (even if it's empty)
     if ('profilePictureBase64' in req.body || req.file) {
       updateData.profilePictureUrl = profilePictureUrl;
