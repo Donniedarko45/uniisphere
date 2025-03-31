@@ -1,5 +1,6 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import prisma from "../config/prisma";
+import { io } from "../utils/socket";
 
 interface AuthenticatedRequest extends Request {
   body: {
@@ -16,6 +17,7 @@ export const sendConnectionRequest = async (
   const userId2 = req.params.userId;
 
   try {
+    // Check if connection already exists
     const existingConnection = await prisma.connection.findUnique({
       where: { userId1_userId2: { userId1, userId2 } },
     });
@@ -24,11 +26,30 @@ export const sendConnectionRequest = async (
       return res.status(400).json({ message: "Connection already exists" });
     }
 
+    // Create new connection request
     const newConnection = await prisma.connection.create({
       data: {
         userId1,
         userId2,
+        status: "pending"
       },
+      include: {
+        user1: {
+          select: {
+            id: true,
+            username: true,
+            profilePictureUrl: true,
+            headline: true
+          }
+        }
+      }
+    });
+
+    // Send real-time notification to recipient
+    io.to(userId2).emit("connectionRequest", {
+      connectionId: newConnection.id,
+      sender: newConnection.user1,
+      timestamp: new Date()
     });
 
     return res.status(201).json({
@@ -41,28 +62,106 @@ export const sendConnectionRequest = async (
   }
 };
 
+// Get pending connection requests
+export const getPendingRequests = async (req: AuthenticatedRequest, res: Response,next:NextFunction):Promise<any> => {
+  try {
+    const userId = req.body.userId;
 
-export const acceptConnection = async (req: Request, res: Response) => {
-  const { connectionId } = req.params;
+    const pendingRequests = await prisma.connection.findMany({
+      where: {
+        userId2: userId,
+        status: "pending"
+      },
+      include: {
+        user1: {
+          select: {
+            id: true,
+            username: true,
+            profilePictureUrl: true,
+            headline: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
 
-  await prisma.connection.update({
-    where: { id: connectionId },
-    data: { status: "accepted" },
-  });
-
-  res.status(200).json({ message: "Connection accepted" });
+    return res.status(200).json({
+      pendingRequests
+    });
+  } catch (error) {
+    console.error("Error fetching pending requests:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
 };
 
-// Decline a connection request
-export const declineConnection = async (req: Request, res: Response) => {
+export const acceptConnection = async (req: Request, res: Response):Promise<any> => {
   const { connectionId } = req.params;
+  const userId = req.body.userId;
 
-  await prisma.connection.update({
-    where: { id: connectionId },
-    data: { status: "declined" },
-  });
+  try {
+    const connection = await prisma.connection.findUnique({
+      where: { id: connectionId },
+      include: {
+        user1: true,
+        user2: true
+      }
+    });
 
-  res.status(200).json({ message: "Connection declined" });
+    if (!connection) {
+      return res.status(404).json({ message: "Connection request not found" });
+    }
+
+    if (connection.userId2 !== userId) {
+      return res.status(403).json({ message: "Not authorized to accept this request" });
+    }
+
+    await prisma.connection.update({
+      where: { id: connectionId },
+      data: { status: "accepted" },
+    });
+
+    // Notify the sender that their request was accepted
+    io.to(connection.userId1).emit("connectionAccepted", {
+      connectionId,
+      acceptedBy: connection.user2
+    });
+
+    res.status(200).json({ message: "Connection accepted" });
+  } catch (error) {
+    console.error("Error accepting connection:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const declineConnection = async (req: Request, res: Response):Promise<any> => {
+  const { connectionId } = req.params;
+  const userId = req.body.userId;
+
+  try {
+    const connection = await prisma.connection.findUnique({
+      where: { id: connectionId }
+    });
+
+    if (!connection) {
+      return res.status(404).json({ message: "Connection request not found" });
+    }
+
+    if (connection.userId2 !== userId) {
+      return res.status(403).json({ message: "Not authorized to decline this request" });
+    }
+
+    await prisma.connection.update({
+      where: { id: connectionId },
+      data: { status: "declined" },
+    });
+
+    res.status(200).json({ message: "Connection declined" });
+  } catch (error) {
+    console.error("Error declining connection:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };
 
 export const getConnections = async (req: Request, res: Response) => {
