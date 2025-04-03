@@ -25,22 +25,22 @@ router.get("/feed", authenticate, getFeed);
 router.get("/user/:userId", authenticate, getUserPosts);
 
 // Protected routes - Post operations
-router.post("/", 
-  authenticate, 
-  verifyUser, 
+router.post("/",
+  authenticate,
+  verifyUser,
   upload.single("media"),
   createPost
 );
 
-router.put("/:postId", 
-  authenticate, 
+router.put("/:postId",
+  authenticate,
   verifyUser,
   updatePost
 );
 
-router.delete("/:postId", 
-  authenticate, 
-  verifyUser, 
+router.delete("/:postId",
+  authenticate,
+  verifyUser,
   deletePost
 );
 
@@ -55,7 +55,7 @@ router.post("/:postId/like",
   likePost
 );
 
-router.delete("/:postId/like",
+router.delete("/:postId/unlike",
   authenticate,
   unlikePost
 );
