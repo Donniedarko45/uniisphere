@@ -45,9 +45,9 @@ export const updatePost = async (req: Request, res: Response, next: NextFunction
 
 export const deletePost = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { PostId } = req.params;
+    const { postId } = req.params;
     await prisma.post.delete({
-      where: { id: PostId },
+      where: { id: postId },
     });
     res.status(200).json({ message: "Post deleted Successfully" });
   } catch (error) {
@@ -56,13 +56,13 @@ export const deletePost = async (req: Request, res: Response, next: NextFunction
 };
 
 export const getPost = async (req: Request, res: Response, next: NextFunction) => {
-  const { PostId } = req.params;
+  const { postId } = req.params;
   try {
     const post = await prisma.post.findUnique({
-      where: { id: PostId },
+      where: { id: postId },
     });
     if (!post) {
-      return res.status(404).json({ message: "post not found with this id" });
+      return res.status(404).json({ message: "Post not found" });
     }
     res.status(200).json(post);
   } catch (error) {
@@ -71,10 +71,10 @@ export const getPost = async (req: Request, res: Response, next: NextFunction) =
 };
 
 export const getUserPosts = async (req: Request, res: Response, next: NextFunction) => {
-  const { UserId } = req.params;
+  const { userId } = req.params;
   try {
     const posts = await prisma.post.findMany({
-      where: { id: UserId },
+      where: { userId },
     });
     res.status(200).json({ posts });
   } catch (error) {
@@ -147,3 +147,44 @@ export const unlikePost = async (req: Request, res: Response, next: NextFunction
     next(error);
   }
 };
+
+
+export const getTotalPosts = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).userId as string
+    const usersWithCount = await prisma.user.findUnique({
+      where: { id: String(userId) },
+      include: {
+        _count: {
+          select: { 
+            posts: true
+          }
+        },
+        posts: true
+      }
+    });
+
+    const totalPosts = await prisma.post.findMany({
+      where: {
+        userId
+      },
+      select: {
+        content:true,
+        mediaUrl:true,
+        user:true,
+        _count: {
+          select: {
+    
+         Likes: true,
+         Comments: true,
+         
+          }
+        }
+      }
+    });
+
+    res.status(200).json({ totalPosts });
+  } catch (error) {
+    next(error);
+  }
+}

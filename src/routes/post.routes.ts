@@ -5,10 +5,10 @@ import {
   createPost,
   deletePost,
   getPost,
-  getUserPosts,
+  getTotalPosts,
   likePost,
   unlikePost,
-  updatePost,
+  updatePost
 } from "../controllers/post.controller";
 import { authenticate, verifyUser } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
@@ -22,9 +22,11 @@ router.get("/:postId", getPost as any);
 router.get("/feed", authenticate, getFeed);
 
 // Protected routes - User specific 
-router.get("/user/:userId", authenticate, getUserPosts);
+router.get("/user/:userId", authenticate, getPost as any);
 
 // Protected routes - Post operations
+router.get("/stats/total", authenticate, getTotalPosts);
+
 router.post("/",
   authenticate,
   verifyUser,

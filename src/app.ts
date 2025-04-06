@@ -10,6 +10,7 @@ import messageRoutes from "./routes/message.routes";
 import postRoutes from "./routes/post.routes";
 import userRoutes from "./routes/user.routes";
 import { setupSocket } from "./utils/socket";
+import { getTotalPosts, getUserPosts } from "./controllers/post.controller";
 dotenv.config();
 const app = express();
 app.use(
