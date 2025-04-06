@@ -72,7 +72,6 @@ export const getFeed = async (
               },
             },
           },
-          take: 3,
           orderBy: {
             createdAt: "desc"
           },
