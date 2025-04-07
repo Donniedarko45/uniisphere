@@ -7,6 +7,7 @@ cloudinary.config({
   api_secret: process.env.ClOUDINARY_API_SECRET,
 });
 
+
 export const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async () => ({

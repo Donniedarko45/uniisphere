@@ -7,6 +7,7 @@ export const BookSchema = z.object({
   categoryId: z.string().uuid(),
 });
 
+
 export const BookmarkSchema = z.object({
   page: z.number().min(1),
   note: z.string().optional(),

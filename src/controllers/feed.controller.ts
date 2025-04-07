@@ -9,7 +9,7 @@ interface AuthRequest extends Request {
 export const getFeed = async (
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const { cursor, limit, filter } = req.query;
@@ -73,7 +73,7 @@ export const getFeed = async (
             },
           },
           orderBy: {
-            createdAt: "desc"
+            createdAt: "desc",
           },
         },
         Likes: true,
@@ -85,13 +85,14 @@ export const getFeed = async (
           },
         },
       },
-      orderBy: filter === "trending"
-        ? {
-          Likes: {
-            _count: "desc"
-          }
-        }
-        : { createdAt: "desc" },
+      orderBy:
+        filter === "trending"
+          ? {
+              Likes: {
+                _count: "desc",
+              },
+            }
+          : { createdAt: "desc" },
     };
 
     const posts = await prisma.post.findMany(baseQuery);
@@ -102,9 +103,7 @@ export const getFeed = async (
       const sharesCount = post._count?.Share || 0;
 
       const engagementScore =
-        likesCount * 1 +
-        commentsCount * 2 +
-        sharesCount * 3;
+        likesCount * 1 + commentsCount * 2 + sharesCount * 3;
 
       return {
         ...post,
@@ -128,4 +127,3 @@ export const getFeed = async (
     next(error);
   }
 };
-

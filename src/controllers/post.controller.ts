@@ -2,7 +2,11 @@ import { NextFunction, Request, Response } from "express";
 import prisma from "../config/prisma";
 import cloudinary from "../utils/cloudinary";
 
-export const createPost = async (req: Request, res: Response, next: NextFunction) => {
+export const createPost = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const { content, userId, visibility, tags, location } = req.body;
   try {
     let mediaUrl = "";
@@ -29,7 +33,11 @@ export const createPost = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-export const updatePost = async (req: Request, res: Response, next: NextFunction) => {
+export const updatePost = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { postId } = req.params;
     const { content, mediaUrl, visibility } = req.body;
@@ -43,7 +51,11 @@ export const updatePost = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-export const deletePost = async (req: Request, res: Response, next: NextFunction) => {
+export const deletePost = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { postId } = req.params;
     await prisma.post.delete({
@@ -55,7 +67,11 @@ export const deletePost = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-export const getPost = async (req: Request, res: Response, next: NextFunction) => {
+export const getPost = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const { postId } = req.params;
   try {
     const post = await prisma.post.findUnique({
@@ -70,7 +86,11 @@ export const getPost = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
-export const getUserPosts = async (req: Request, res: Response, next: NextFunction) => {
+export const getUserPosts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const { userId } = req.params;
   try {
     const posts = await prisma.post.findMany({
@@ -82,7 +102,11 @@ export const getUserPosts = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-export const createComment = async (req: Request, res: Response, next: NextFunction) => {
+export const createComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { postId } = req.params;
     const { content } = req.body;
@@ -98,10 +122,10 @@ export const createComment = async (req: Request, res: Response, next: NextFunct
         user: {
           select: {
             username: true,
-            profilePictureUrl: true
-          }
-        }
-      }
+            profilePictureUrl: true,
+          },
+        },
+      },
     });
 
     res.status(201).json(comment);
@@ -110,7 +134,11 @@ export const createComment = async (req: Request, res: Response, next: NextFunct
   }
 };
 
-export const likePost = async (req: Request, res: Response, next: NextFunction) => {
+export const likePost = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { postId } = req.params;
     const userId = (req as any).userId;
@@ -119,7 +147,7 @@ export const likePost = async (req: Request, res: Response, next: NextFunction) 
       data: {
         userId,
         postId,
-      }
+      },
     });
 
     res.status(201).json(like);
@@ -128,7 +156,11 @@ export const likePost = async (req: Request, res: Response, next: NextFunction) 
   }
 };
 
-export const unlikePost = async (req: Request, res: Response, next: NextFunction) => {
+export const unlikePost = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { postId } = req.params;
     const userId = (req as any).userId;
@@ -137,9 +169,9 @@ export const unlikePost = async (req: Request, res: Response, next: NextFunction
       where: {
         userId_postId: {
           userId,
-          postId
-        }
-      }
+          postId,
+        },
+      },
     });
 
     res.status(200).json({ message: "Post unliked successfully" });
@@ -148,43 +180,33 @@ export const unlikePost = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-
-export const getTotalPosts = async (req: Request, res: Response, next: NextFunction) => {
+export const getTotalPosts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-    const userId = (req as any).userId as string
-    const usersWithCount = await prisma.user.findUnique({
-      where: { id: String(userId) },
-      include: {
-        _count: {
-          select: { 
-            posts: true
-          }
-        },
-        posts: true
-      }
-    });
+    const userId = (req as any).userId as string;
 
     const totalPosts = await prisma.post.findMany({
       where: {
-        userId
+        userId,
       },
       select: {
-        content:true,
-        mediaUrl:true,
-        user:true,
+        content: true,
+        mediaUrl: true,
+        user: true,
         _count: {
           select: {
-    
-         Likes: true,
-         Comments: true,
-         
-          }
-        }
-      }
+            Likes: true,
+            Comments: true,
+          },
+        },
+      },
     });
 
     res.status(200).json({ totalPosts });
   } catch (error) {
     next(error);
   }
-}
+};

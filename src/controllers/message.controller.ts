@@ -34,7 +34,9 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
     });
 
     if (!connection) {
-      return res.status(403).json({ error: "Users must be connected to send messages" });
+      return res
+        .status(403)
+        .json({ error: "Users must be connected to send messages" });
     }
 
     // Create the message
@@ -120,7 +122,10 @@ export const getMessages = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const getConversations = async (req: AuthenticatedRequest, res: Response) => {
+export const getConversations = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
   const userId = req.userId;
 
   if (!userId) {
@@ -131,10 +136,7 @@ export const getConversations = async (req: AuthenticatedRequest, res: Response)
     // Get all unique users the authenticated user has messaged with
     const conversations = await prisma.message.findMany({
       where: {
-        OR: [
-          { senderId: userId },
-          { receiverId: userId },
-        ],
+        OR: [{ senderId: userId }, { receiverId: userId }],
       },
       select: {
         sender: {
@@ -161,7 +163,8 @@ export const getConversations = async (req: AuthenticatedRequest, res: Response)
 
     // Process conversations to get unique users and latest message
     const uniqueConversations = conversations.reduce((acc: any, message) => {
-      const otherUser = message.sender.id === userId ? message.receiver : message.sender;
+      const otherUser =
+        message.sender.id === userId ? message.receiver : message.sender;
       if (!acc[otherUser.id]) {
         acc[otherUser.id] = {
           user: otherUser,
@@ -179,7 +182,10 @@ export const getConversations = async (req: AuthenticatedRequest, res: Response)
   }
 };
 
-export const deleteMessage = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteMessage = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
   const userId = req.userId;
   const messageId = req.params.messageId;
 
@@ -198,7 +204,9 @@ export const deleteMessage = async (req: AuthenticatedRequest, res: Response) =>
     }
 
     if (message.senderId !== userId) {
-      return res.status(403).json({ error: "Not authorized to delete this message" });
+      return res
+        .status(403)
+        .json({ error: "Not authorized to delete this message" });
     }
 
     // Delete the message

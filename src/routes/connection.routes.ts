@@ -20,5 +20,4 @@ router.post('/getPending/', authenticate, getPendingRequests);
 router.post('/decline/:connectionId', authenticate, declineConnection);
 router.get('/connections', authenticate, getConnections);
 router.get('/stats/:userId', authenticate, getConnectionStats); // New endpoint
-
 export default router;
