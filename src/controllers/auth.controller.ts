@@ -8,7 +8,6 @@ import prisma from "../config/prisma";
 import cloudinary from "../utils/cloudinary";
 import { generateToken } from "../utils/jwt.utils";
 
-
 dotenv.config();
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -36,9 +35,6 @@ const sendOtp = async (email: string, otp: string) => {
   }
 };
 
-
-
-
 export const register = async (
   req: Request,
   res: Response,
@@ -55,16 +51,14 @@ export const register = async (
     const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
     if (!usernameRegex.test(username)) {
       return res.status(400).json({
-        error: "Username must be 3-30 characters long and can only contain letters, numbers and underscore"
+        error:
+          "Username must be 3-30 characters long and can only contain letters, numbers and underscore",
       });
     }
 
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email, verified: true },
-          { username }
-        ]
+        OR: [{ email, verified: true }, { username }],
       },
     });
 
@@ -113,13 +107,13 @@ export const register = async (
 export const verifyOtp = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const { email, otp } = req.body;
 
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (!user) {
@@ -129,13 +123,13 @@ export const verifyOtp = async (
     await prisma.otp.deleteMany({
       where: {
         userId: user.id,
-        expiresAt: { lt: new Date() }
-      }
+        expiresAt: { lt: new Date() },
+      },
     });
 
     const otpRecord = await prisma.otp.findFirst({
       where: { userId: user.id, code: otp },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
     });
 
     if (!otpRecord) {
@@ -151,9 +145,8 @@ export const verifyOtp = async (
     const tempToken = generateToken(user.id);
     res.status(200).json({
       message: "OTP verified successfully",
-      tempToken
+      tempToken,
     });
-
   } catch (error) {
     return next(error);
   }
@@ -162,7 +155,7 @@ export const verifyOtp = async (
 export const completeProfile = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const {
@@ -206,8 +199,8 @@ export const completeProfile = async (
           folder: "profile_pictures",
           transformation: [
             { width: 500, height: 500, crop: "fill" },
-            { quality: "auto" }
-          ]
+            { quality: "auto" },
+          ],
         });
         profilePictureUrl = result.secure_url;
 
@@ -215,22 +208,23 @@ export const completeProfile = async (
           data: {
             publicId: result.public_id,
             url: result.secure_url,
-            resourceType: 'image',
-            userId: user.id
-          }
+            resourceType: "image",
+            userId: user.id,
+          },
         });
       } catch (error) {
-        return res.status(400).json({ error: "Failed to upload profile picture" });
+        return res
+          .status(400)
+          .json({ error: "Failed to upload profile picture" });
       }
-    }
-    else if (profilePictureBase64) {
+    } else if (profilePictureBase64) {
       try {
         const result = await cloudinary.uploader.upload(profilePictureBase64, {
           folder: "profile_pictures",
           transformation: [
             { width: 500, height: 500, crop: "fill" },
-            { quality: "auto" }
-          ]
+            { quality: "auto" },
+          ],
         });
 
         profilePictureUrl = result.secure_url;
@@ -239,20 +233,24 @@ export const completeProfile = async (
           data: {
             publicId: result.public_id,
             url: result.secure_url,
-            resourceType: 'image',
-            userId: user.id
-          }
+            resourceType: "image",
+            userId: user.id,
+          },
         });
       } catch (error) {
         console.error("Error uploading base64 image:", error);
-        return res.status(400).json({ error: "Failed to upload profile picture" });
+        return res
+          .status(400)
+          .json({ error: "Failed to upload profile picture" });
       }
     }
 
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
-        error: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character"
+        error:
+          "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number and one special character",
       });
     }
 
@@ -289,16 +287,15 @@ export const completeProfile = async (
         startYear,
         endYear,
         verified: true,
-      }
+      },
     });
 
     const token = generateToken(updatedUser.id);
     res.status(200).json({
       message: "Profile completed successfully",
       token,
-      user: updatedUser
+      user: updatedUser,
     });
-
   } catch (error) {
     return next(error);
   }
@@ -317,11 +314,10 @@ export const login = async (
       return res.status(401).json({ message: "Invalid Credentials" });
     }
 
-
     if (!user.verified) {
       return res.status(403).json({
         message: "Email not verified. Please verify your email first.",
-        needsVerification: true
+        needsVerification: true,
       });
     }
 
@@ -332,15 +328,13 @@ export const login = async (
 
     const token = generateToken(user.id);
 
-
-
     return res.status(200).json({
       token,
       user: {
         id: user.id,
         email: user.email,
-        username: user.username
-      }
+        username: user.username,
+      },
     });
   } catch (error) {
     return next(error);
@@ -418,18 +412,16 @@ export const resendOtp = async (
   }
 };
 
-// Add these new controller functions
-
 export const forgotPassword = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const { email } = req.body;
 
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (!user) {
@@ -438,7 +430,7 @@ export const forgotPassword = async (
 
     // Delete any existing OTPs
     await prisma.otp.deleteMany({
-      where: { userId: user.id }
+      where: { userId: user.id },
     });
 
     const otp = crypto.randomInt(100000, 999999).toString();
@@ -448,16 +440,15 @@ export const forgotPassword = async (
         userId: user.id,
         code: otp,
         expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes expiry
-      }
+      },
     });
 
     await sendOtp(email, otp);
 
     res.status(200).json({
       message: "Password reset OTP sent to your email",
-      expiresIn: "5 minutes"
+      expiresIn: "5 minutes",
     });
-
   } catch (error) {
     return next(error);
   }
@@ -466,7 +457,7 @@ export const forgotPassword = async (
 export const resetPassword = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -477,7 +468,7 @@ export const resetPassword = async (
       hasUpper: /[A-Z]/.test(newPassword),
       hasLower: /[a-z]/.test(newPassword),
       hasNumber: /\d/.test(newPassword),
-      hasSpecial: /[@$!%*?&#]/.test(newPassword)
+      hasSpecial: /[@$!%*?&#]/.test(newPassword),
     };
 
     if (!Object.values(passwordValidation).every(Boolean)) {
@@ -492,12 +483,12 @@ export const resetPassword = async (
         },
         failed: Object.entries(passwordValidation)
           .filter(([_, valid]) => !valid)
-          .map(([key]) => key)
+          .map(([key]) => key),
       });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (!user) {
@@ -508,16 +499,16 @@ export const resetPassword = async (
     await prisma.otp.deleteMany({
       where: {
         userId: user.id,
-        expiresAt: { lt: new Date() }
-      }
+        expiresAt: { lt: new Date() },
+      },
     });
 
     const otpRecord = await prisma.otp.findFirst({
       where: {
         userId: user.id,
-        code: otp
+        code: otp,
       },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
     });
 
     if (!otpRecord) {
@@ -534,18 +525,17 @@ export const resetPassword = async (
     // Update password
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash: hashedPassword }
+      data: { passwordHash: hashedPassword },
     });
 
     // Delete used OTP
     await prisma.otp.delete({
-      where: { id: otpRecord.id }
+      where: { id: otpRecord.id },
     });
 
     res.status(200).json({
-      message: "Password reset successful"
+      message: "Password reset successful",
     });
-
   } catch (error) {
     return next(error);
   }

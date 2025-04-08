@@ -239,3 +239,18 @@ export const updateProfile = async (
     return next(error);
   }
 };
+
+
+export const getAllUsers = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const allUsers = await prisma.user.findMany();
+    res.status(200).json(allUsers);
+  } catch (error) {
+    next(error); // pass the error to the Express error handler
+  }
+};
+

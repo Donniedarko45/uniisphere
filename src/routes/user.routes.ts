@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getProfile, updateProfile } from "../controllers/user.controller";
+import { getAllUsers, getProfile, updateProfile } from "../controllers/user.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
 
@@ -10,11 +10,13 @@ router.get("/profile", getProfile);
 
 // Update profile - needs authentication and potential file upload
 router.patch(
-  "/profile", 
-  authenticate, 
-  upload.single("profilePicture"), 
+  "/profile",
+  authenticate,
+  upload.single("profilePicture"),
   updateProfile
 );
+
+router.get("/getAll", getAllUsers)
 
 // Get profile by userId as a URL parameter (alternative style)
 router.get("/profile/:userId", async (req, res, next) => {
