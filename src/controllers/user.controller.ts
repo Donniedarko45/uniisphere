@@ -47,6 +47,8 @@ export const getProfile = async (
         college: true,
         degree: true,
         email: true,
+        connections1: true,
+        connections2: true,
         _count: {
           select: {
             connections1: true,

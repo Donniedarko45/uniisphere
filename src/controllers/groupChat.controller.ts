@@ -19,6 +19,7 @@ export const createGroup = async (req: Request, res: Response) => {
   }
 };
 
+
 export const sendGroupMessage = async (req: Request, res: Response) => {
   const { senderId, groupId, content } = req.body;
   try {
