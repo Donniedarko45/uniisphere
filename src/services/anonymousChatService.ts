@@ -7,12 +7,12 @@ class AnonymousChatService {
   private onlineUsers: Map<string, string> = new Map(); // userId -> socketId
   private waitingUsers: Set<string> = new Set(); // userId of users waiting for match
 
-  constructor() {}
+  constructor() { }
 
   async updateUserOnlineStatus(userId: string, isOnline: boolean) {
     return prisma.user.update({
       where: { id: userId },
-      data: { 
+      data: {
         isOnline,
         lastSeen: new Date()
       }
@@ -46,7 +46,7 @@ class AnonymousChatService {
   async endChat(chatId: string) {
     return prisma.anonymousChat.update({
       where: { id: chatId },
-      data: { 
+      data: {
         status: 'ended',
         endedAt: new Date()
       }
