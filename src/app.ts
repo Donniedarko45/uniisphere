@@ -1,7 +1,7 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import http from "http";
+import { createServer } from "http";
 import { getProfile } from "./controllers/user.controller";
 import authRoutes from "./routes/auth.routes";
 import connectionRoutes from "./routes/connection.routes";
@@ -9,24 +9,35 @@ import feedRoutes from "./routes/feed.routes";
 import messageRoutes from "./routes/message.routes";
 import postRoutes from "./routes/post.routes";
 import userRoutes from "./routes/user.routes";
-import { setupSocket } from "./utils/socket";
+import anonymousChatRoutes from "./routes/anonymousChat.routes";
+import { setupWebSocket } from "./config/socket";
 import { getTotalPosts, getUserPosts } from "./controllers/post.controller";
 dotenv.config();
 const app = express();
+const httpServer = createServer(app);
+
+// Middleware
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }),
 );
-
-const server = http.createServer(app);
-const io = setupSocket(server);
-server.listen(process.env.PORT || 5000, () => {
-  console.log(`server running on port ${process.env.PORT || 5000}`);
-});
 app.use(express.json());
+
+// Initialize WebSocket
+const io = setupWebSocket(httpServer);
+
+// Store io instance on app for use in routes if needed
+app.set('io', io);
+
+// Start server
+const PORT = process.env.PORT || 5000;
+httpServer.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
 app.use("/api", connectionRoutes);
 app.use("/auth", authRoutes);
 app.use("/posts", postRoutes);
@@ -34,3 +45,4 @@ app.use("/users", userRoutes);
 app.use("/getProfile", getProfile);
 app.use("/api", feedRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/anonymous-chat", anonymousChatRoutes);

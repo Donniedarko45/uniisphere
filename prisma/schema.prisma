@@ -29,6 +29,8 @@ model User {
   startYear         Int?
   endYear           Int?
   verified          Boolean           @default(false)
+  isOnline          Boolean           @default(false)
+  lastSeen          DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   otps              Otp[]
@@ -45,6 +47,8 @@ model User {
   Comments          Comments[]
   Likes             Likes[]
   CloudinaryMedia   CloudinaryMedia[]
+  anonymousChats1   AnonymousChat[]   @relation("AnonymousChatUser1")
+  anonymousChats2   AnonymousChat[]   @relation("AnonymousChatUser2")
 }
 
 model Otp {
@@ -220,4 +224,28 @@ model CloudinaryMedia {
   createdAt    DateTime @default(now())
   userId       String
   user         User     @relation(fields: [userId], references: [id])
+}
+
+model AnonymousChat {
+  id        String             @id @default(uuid())
+  userId1   String
+  userId2   String
+  user1     User              @relation("AnonymousChatUser1", fields: [userId1], references: [id])
+  user2     User              @relation("AnonymousChatUser2", fields: [userId2], references: [id])
+  status    String            @default("active")
+  messages  AnonymousMessage[]
+  createdAt DateTime          @default(now())
+  endedAt   DateTime?
+
+  @@unique([userId1, userId2])
+}
+
+model AnonymousMessage {
+  id        String       @id @default(uuid())
+  content   String
+  senderId  String
+  isUser1   Boolean
+  createdAt DateTime     @default(now())
+  chat      AnonymousChat @relation(fields: [chatId], references: [id])
+  chatId    String
 }
