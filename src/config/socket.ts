@@ -1,16 +1,16 @@
 import { Server } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { anonymousChatService } from '../services/anonymousChatService';
-import { 
-  AnonymousChatSocket, 
-  ClientToServerEvents, 
-  ServerToClientEvents 
+import {
+  AnonymousChatSocket,
+  ClientToServerEvents,
+  ServerToClientEvents
 } from '../type/anonymousChat';
 
 export function setupWebSocket(httpServer: HttpServer) {
   const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
     cors: {
-      origin: process.env.CLIENT_URL || 'http://localhost:3000',
+      origin: process.env.CORS_ORIGIN,
       methods: ['GET', 'POST']
     }
   });
@@ -22,14 +22,12 @@ export function setupWebSocket(httpServer: HttpServer) {
       return;
     }
 
-    // Update user's online status and store socket mapping
     anonymousChatService.updateUserOnlineStatus(userId, true)
       .then(() => {
         anonymousChatService.setUserOnline(userId, socket.id);
       })
       .catch(console.error);
 
-    // Handle user joining waiting queue
     socket.on('join-queue', async () => {
       anonymousChatService.addToWaitingQueue(userId);
       try {
@@ -44,7 +42,7 @@ export function setupWebSocket(httpServer: HttpServer) {
       try {
         const message = await anonymousChatService.createMessage(chatId, content, userId, isUser1);
         const recipientSocketId = anonymousChatService.getRecipientSocketId(chatId, userId, isUser1);
-        
+
         if (recipientSocketId) {
           io.to(recipientSocketId).emit('receive-anonymous-message', message);
         }
