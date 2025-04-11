@@ -64,8 +64,10 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
       },
     });
 
-    // Emit real-time message to receiver
-    io.to(receiverId).emit("newMessage", message);
+    // Emit real-time message to receiver if socket is available
+    if (io && io.to) {
+      io.to(receiverId).emit("newMessage", message);
+    }
 
     res.status(201).json(message);
   } catch (error) {
