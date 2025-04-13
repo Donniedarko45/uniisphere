@@ -88,10 +88,10 @@ export const getFeed = async (
       orderBy:
         filter === "trending"
           ? {
-              Likes: {
-                _count: "desc",
-              },
-            }
+            Likes: {
+              _count: "desc",
+            },
+          }
           : { createdAt: "desc" },
     };
 

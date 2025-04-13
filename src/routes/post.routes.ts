@@ -30,7 +30,7 @@ router.get("/stats/total", authenticate, getTotalPosts);
 router.post("/",
   authenticate,
   verifyUser,
-  upload.single("media"),
+  upload.array("media", 5),
   createPost
 );
 
