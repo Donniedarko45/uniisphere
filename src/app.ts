@@ -2,6 +2,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import { createServer } from "http";
+import http from "http";
+import { setupSocket } from "./utils/socket";
 import { getProfile } from "./controllers/user.controller";
 import authRoutes from "./routes/auth.routes";
 import connectionRoutes from "./routes/connection.routes";
@@ -10,7 +12,6 @@ import messageRoutes from "./routes/message.routes";
 import postRoutes from "./routes/post.routes";
 import userRoutes from "./routes/user.routes";
 import anonymousChatRoutes from "./routes/anonymousChat.routes";
-import { setupWebSocket } from "./config/socket";
 dotenv.config();
 const app = express();
 const httpServer = createServer(app);
@@ -25,9 +26,8 @@ app.use(
 );
 app.use(express.json());
 
-// Initialize WebSocket
-const io = setupWebSocket(httpServer);
-
+const server = http.createServer(app);
+const io = setupSocket(server);
 // Store io instance on app for use in routes if needed
 app.set('io', io);
 
@@ -44,4 +44,4 @@ app.use("/users", userRoutes);
 app.use("/getProfile", getProfile);
 app.use("/api", feedRoutes);
 app.use("/api/messages", messageRoutes);
-app.use("api/anonymous",anonymousChatRoutes);
+app.use("api/anonymous", anonymousChatRoutes);
