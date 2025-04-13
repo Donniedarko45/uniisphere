@@ -44,4 +44,4 @@ app.use("/users", userRoutes);
 app.use("/getProfile", getProfile);
 app.use("/api", feedRoutes);
 app.use("/api/messages", messageRoutes);
-app.use("/api/anonymous-chat", anonymousChatRoutes);
+app.use("api/anonymous",anonymousChatRoutes);
