@@ -67,8 +67,6 @@ export const getProfile = async (
 };
 
 
-
-
 export const updateProfile = async (
   req: Request,
   res: Response,
@@ -97,7 +95,6 @@ export const updateProfile = async (
       workorProject,
       startYear,
       endYear,
-      profilePictureBase64,
     } = req.body;
 
     const existingUser = await prisma.user.findUnique({
@@ -108,6 +105,7 @@ export const updateProfile = async (
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Username validation
     if (username && username !== existingUser.username) {
       const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
       if (!usernameRegex.test(username)) {
@@ -127,6 +125,7 @@ export const updateProfile = async (
 
     let profilePictureUrl = existingUser.profilePictureUrl || "";
 
+    // Handle profile picture upload
     if (req.file) {
       try {
         const result = await cloudinary.uploader.upload(req.file.path, {
@@ -138,6 +137,7 @@ export const updateProfile = async (
         });
         profilePictureUrl = result.secure_url;
 
+        // Store media info in database
         await prisma.cloudinaryMedia.create({
           data: {
             publicId: result.public_id,
@@ -150,36 +150,12 @@ export const updateProfile = async (
         console.error("Error uploading profile picture:", error);
         return res.status(400).json({ error: "Failed to upload profile picture" });
       }
-    } else if (profilePictureBase64) {
-      try {
-        const result = await cloudinary.uploader.upload(profilePictureBase64, {
-          folder: "profile_pictures",
-          transformation: [
-            { width: 500, height: 500, crop: "fill" },
-            { quality: "auto" }
-          ]
-        });
-
-        profilePictureUrl = result.secure_url;
-
-        await prisma.cloudinaryMedia.create({
-          data: {
-            publicId: result.public_id,
-            url: result.secure_url,
-            resourceType: 'image',
-            userId
-          }
-        });
-      } catch (error) {
-        console.error("Error uploading base64 image:", error);
-        console.error("Base64 string length:", profilePictureBase64?.length);
-        console.error("Base64 string preview:", profilePictureBase64?.substring(0, 50));
-        return res.status(400).json({ error: "Failed to upload profile picture" });
-      }
     }
 
+    // Prepare update data
     const updateData: any = {};
 
+    // Only include fields that are provided in the request
     if (username !== undefined) updateData.username = username;
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
@@ -198,11 +174,12 @@ export const updateProfile = async (
     if (Skills !== undefined) updateData.Skills = Skills;
     if (Interests !== undefined) updateData.Interests = Interests;
 
-    // Check if profilePictureBase64 was provided at all (even if it's empty)
-    if ('profilePictureBase64' in req.body || req.file) {
+    // Only update profile picture URL if a new picture was uploaded
+    if (req.file) {
       updateData.profilePictureUrl = profilePictureUrl;
     }
 
+    // Update user profile
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,

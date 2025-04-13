@@ -37,7 +37,7 @@ export function setupWebSocket(httpServer: HttpServer) {
       }
     });
 
-    // Handle chat messages
+
     socket.on('send-anonymous-message', async ({ chatId, content, isUser1 }) => {
       try {
         const message = await anonymousChatService.createMessage(chatId, content, userId, isUser1);

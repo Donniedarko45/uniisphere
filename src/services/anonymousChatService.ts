@@ -87,7 +87,7 @@ class AnonymousChatService {
         return chat;
       } catch (error) {
         console.error('Error matching users:', error);
-        // Put users back in waiting list if matching fails
+        
         this.waitingUsers.add(user1Id);
         this.waitingUsers.add(user2Id);
         throw error;
