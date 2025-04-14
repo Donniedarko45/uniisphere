@@ -2,21 +2,23 @@ import { NextFunction, Request, Response } from "express";
 import prisma from "../config/prisma";
 import cloudinary from "../utils/cloudinary";
 
-export const createPost = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const createPost = async (req: Request, res: Response, next: NextFunction) => {
   const { content, userId, visibility, tags, location } = req.body;
+
   try {
-    let mediaUrl = "";
-    if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "posts",
-        resource_type: "auto",
-      });
-      mediaUrl = result.secure_url;
+    const mediaUrl = [];
+
+    // Handle multiple files
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files) {
+        const result = await cloudinary.uploader.upload(file.path, {
+          folder: "posts",
+          resource_type: "auto",
+        });
+        mediaUrl.push(result.secure_url);
+      }
     }
+
     const post = await prisma.post.create({
       data: {
         content,
@@ -27,6 +29,7 @@ export const createPost = async (
         location,
       },
     });
+
     res.status(201).json(post);
   } catch (error) {
     next(error);

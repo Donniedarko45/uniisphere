@@ -94,7 +94,7 @@ model Share {
 model Post {
   id         String     @id @default(uuid())
   content    String
-  mediaUrl   String?
+  mediaUrl   String[]
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   postType   String     @default("text")
@@ -230,22 +230,22 @@ model AnonymousChat {
   id        String             @id @default(uuid())
   userId1   String
   userId2   String
-  user1     User              @relation("AnonymousChatUser1", fields: [userId1], references: [id])
-  user2     User              @relation("AnonymousChatUser2", fields: [userId2], references: [id])
-  status    String            @default("active")
+  user1     User               @relation("AnonymousChatUser1", fields: [userId1], references: [id])
+  user2     User               @relation("AnonymousChatUser2", fields: [userId2], references: [id])
+  status    String             @default("active")
   messages  AnonymousMessage[]
-  createdAt DateTime          @default(now())
+  createdAt DateTime           @default(now())
   endedAt   DateTime?
 
   @@unique([userId1, userId2])
 }
 
 model AnonymousMessage {
-  id        String       @id @default(uuid())
+  id        String        @id @default(uuid())
   content   String
   senderId  String
   isUser1   Boolean
-  createdAt DateTime     @default(now())
+  createdAt DateTime      @default(now())
   chat      AnonymousChat @relation(fields: [chatId], references: [id])
   chatId    String
 }
