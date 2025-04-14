@@ -6,7 +6,7 @@ export const createPost = async (req: Request, res: Response, next: NextFunction
   const { content, userId, visibility, tags, location } = req.body;
 
   try {
-    const mediaUrl = [];
+    const mediaUrls: string[] = []; // Changed variable name to be more clear
 
     // Handle multiple files
     if (req.files && Array.isArray(req.files)) {
@@ -15,14 +15,14 @@ export const createPost = async (req: Request, res: Response, next: NextFunction
           folder: "posts",
           resource_type: "auto",
         });
-        mediaUrl.push(result.secure_url);
+        mediaUrls.push(result.secure_url);
       }
     }
 
     const post = await prisma.post.create({
       data: {
         content,
-        mediaUrl,
+        mediaUrl: mediaUrls, // Now matches the string[] type in schema
         userId,
         visibility,
         tags: tags ? tags.split(",") : [],
