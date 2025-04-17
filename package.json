@@ -14,7 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.0.52",
-    "@prisma/client": "^6.4.1",
+    "@prisma/client": "^6.6.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.7",

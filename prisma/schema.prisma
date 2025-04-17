@@ -30,12 +30,14 @@ model User {
   endYear           Int?
   verified          Boolean           @default(false)
   isOnline          Boolean           @default(false)
+  status            String            @default("available")
   lastSeen          DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   otps              Otp[]
   bookmarks         Bookmark[]
   posts             Post[]
+  blogs             Blogs[]
   connections1      Connection[]      @relation("UserConnections1")
   connections2      Connection[]      @relation("UserConnections2")
   senderMessages    Message[]         @relation("senderMessages")
@@ -190,6 +192,28 @@ model Book {
 
   @@index([categoryId])
   @@index([title])
+}
+
+model Blogs {
+  id           String    @id @default(uuid())
+  title        String    @db.VarChar(255)
+  description  String?   @db.Text
+  content      String    @db.Text
+  titlePhoto   String?
+  contentVideo String[]
+  mediaUrl     String[]
+  author       User      @relation(fields: [authorId], references: [id])
+  authorId     String
+  published    Boolean   @default(false)
+  views        Int       @default(0)
+  likes        Int       @default(0)
+  tags         String[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([title])
+  @@index([authorId])
+  @@index([createdAt])
 }
 
 model Category {
