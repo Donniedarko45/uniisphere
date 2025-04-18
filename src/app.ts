@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import express from "express";
 import { createServer } from "http";
 import http from "http";
+import blogRoutes from "./routes/blogs.routes"
 import { setupSocket } from "./utils/socket";
 import { getProfile } from "./controllers/user.controller";
 import authRoutes from "./routes/auth.routes";
@@ -43,5 +44,6 @@ app.use("/posts", postRoutes);
 app.use("/users", userRoutes);
 app.use("/getProfile", getProfile);
 app.use("/api", feedRoutes);
+app.use("/api", blogRoutes)
 app.use("/api/messages", messageRoutes);
 app.use("/api/anonymous", anonymousChatRoutes);

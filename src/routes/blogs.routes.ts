@@ -9,14 +9,14 @@ import {
 
 const router = Router();
 
-router.get('/', getAllBlogs);
+router.get('/allBlogs', getAllBlogs);
 
-router.get('/:id', getBlogById);
+router.get('/blog/:id', getBlogById);
 
-router.post('/', createBlog);
+router.post('/blog/create', createBlog);
 
-router.put('/:id', updateBlog);
+router.put('/blogs/:id', updateBlog);
 
-router.delete('/:id', deleteBlog);
+router.delete('/blogs/:id', deleteBlog);
 
 export default router; 
