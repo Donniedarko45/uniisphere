@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAllUsers, getProfile, updateProfile } from "../controllers/user.controller";
+import { getAllUsers, getProfile, updateProfile, updateUserStatus } from "../controllers/user.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
 
@@ -23,5 +23,8 @@ router.get("/profile/:userId", async (req, res, next) => {
   req.query.userId = req.params.userId;
   return getProfile(req, res, next);
 });
+
+// Update user status
+router.patch('/status', authenticate, updateUserStatus);
 
 export default router;

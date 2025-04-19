@@ -1,11 +1,14 @@
 import { NextFunction, Request, Response } from "express";
 import prisma from "../config/prisma";
 import cloudinary from "../utils/cloudinary";
+import { PrismaClient } from '@prisma/client';
 /*
  *
  * we have to implement a search functionality for users where suppose there 2 data in database donniedarko and donniedarko1 when user type donniedarko it should return both the data
  *
  */
+
+const prismaClient = new PrismaClient();
 
 export const getProfile = async (
   req: Request,
@@ -253,6 +256,31 @@ export const getAllUsers = async (
     res.status(200).json(allUsers);
   } catch (error) {
     next(error); // pass the error to the Express error handler
+  }
+};
+
+export const updateUserStatus = async (req: Request, res: Response): Promise<void> => {
+  const { userId, status, isOnline } = req.body;
+
+  try {
+    const user = await prismaClient.user.update({
+      where: { id: userId },
+      data: {
+        status,
+        isOnline
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user status'
+    });
   }
 };
 
