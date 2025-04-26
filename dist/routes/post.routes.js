@@ -1,15 +1,24 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const upload_middleware_1 = require("../middlewares/upload.middleware");
+const feed_controller_1 = require("../controllers/feed.controller");
 const post_controller_1 = require("../controllers/post.controller");
 const auth_middleware_1 = require("../middlewares/auth.middleware");
+const upload_middleware_1 = require("../middlewares/upload.middleware");
 const router = (0, express_1.Router)();
-// Public routes (no authentication needed)
-router.get('/:postId', post_controller_1.getPost);
-// Protected routes (authentication required)
-router.post('/', auth_middleware_1.authenticate, upload_middleware_1.upload.single("media"), post_controller_1.createPost);
-router.put('/:postId', auth_middleware_1.authenticate, post_controller_1.updatePost);
-router.delete('/:postId', auth_middleware_1.authenticate, post_controller_1.deletePost);
-router.get('/user/:userId', auth_middleware_1.authenticate, post_controller_1.getUserPosts);
+// Public routes
+router.get("/:postId", post_controller_1.getPost);
+// Protected routes - Feed
+router.get("/feed", auth_middleware_1.authenticate, feed_controller_1.getFeed);
+// Protected routes - User specific 
+router.get("/user/:userId", auth_middleware_1.authenticate, post_controller_1.getPost);
+// Protected routes - Post operations
+router.get("/stats/total", auth_middleware_1.authenticate, post_controller_1.getTotalPosts);
+router.post("/", auth_middleware_1.authenticate, auth_middleware_1.verifyUser, upload_middleware_1.upload.array("media", 5), post_controller_1.createPost);
+router.put("/:postId", auth_middleware_1.authenticate, auth_middleware_1.verifyUser, post_controller_1.updatePost);
+router.delete("/:postId", auth_middleware_1.authenticate, auth_middleware_1.verifyUser, post_controller_1.deletePost);
+// Protected routes - Social interactions
+router.post("/:postId/comments", auth_middleware_1.authenticate, post_controller_1.createComment);
+router.post("/:postId/like", auth_middleware_1.authenticate, post_controller_1.likePost);
+router.delete("/:postId", auth_middleware_1.authenticate, post_controller_1.unlikePost);
 exports.default = router;

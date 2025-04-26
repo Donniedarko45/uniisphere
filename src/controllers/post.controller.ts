@@ -58,14 +58,48 @@ export const deletePost = async (
   req: Request,
   res: Response,
   next: NextFunction,
-) => {
+): Promise<any> => {
   try {
     const { postId } = req.params;
-    await prisma.post.delete({
+    const userId = (req as any).userId;
+
+    const post = await prisma.post.findUnique({
       where: { id: postId },
     });
-    res.status(200).json({ message: "Post deleted Successfully" });
+
+    if (!post) {
+      return res.status(404).json({
+        message: "Post not found"
+      });
+    }
+
+    if (post.userId !== userId) {
+      return res.status(403).json({
+        message: "You don't have permission to delete this post"
+      });
+    }
+
+    await prisma.$transaction([
+      prisma.likes.deleteMany({
+        where: { postId }
+      }),
+      prisma.comments.deleteMany({
+        where: { postId }
+      }),
+      prisma.share.deleteMany({
+        where: { postId }
+      }),
+      // Finally delete the post
+      prisma.post.delete({
+        where: { id: postId }
+      })
+    ]);
+
+    res.status(200).json({
+      message: "Post and associated data deleted successfully"
+    });
   } catch (error) {
+    console.error("Error deleting post:", error);
     next(error);
   }
 };

@@ -57,6 +57,7 @@ router.post("/:postId/like",
   likePost
 );
 
+// Changed from DELETE /:postId to DELETE /:postId/unlike
 router.delete("/:postId/unlike",
   authenticate,
   unlikePost
