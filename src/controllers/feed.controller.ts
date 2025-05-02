@@ -20,7 +20,7 @@ export const getFeed = async (
       where: {
         OR: [
           { userId1: userId, status: "accepted" },
-          { userId2: userId, status: "accepted" },
+          { userId2: userId, status: "accepted" }
         ],
       },
       select: {
@@ -29,14 +29,38 @@ export const getFeed = async (
       },
     });
 
-    const user = await prisma.user.findUnique({
+    const currentUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { Interests: true },
+      select: {
+        Interests: true,
+        Skills: true,
+        college: true,
+      },
+    });
+
+    const similarUsers = await prisma.user.findMany({
+      where: {
+        AND: [
+          { id: { not: userId } },
+          {
+            OR: [
+              { Interests: { hasSome: currentUser?.Interests || [] } },
+              { Skills: { hasSome: currentUser?.Skills || [] } },
+              { college: currentUser?.college },
+            ],
+          },
+        ],
+      },
+      select: { id: true },
     });
 
     const connectedUserIds = userNetwork
       .flatMap((conn) => [conn.userId1, conn.userId2])
       .filter((id) => id !== userId);
+
+    const similarUserIds = similarUsers.map((user) => user.id);
+
+    const relevantUserIds = [...new Set([...connectedUserIds, ...similarUserIds])];
 
     const baseQuery: Prisma.PostFindManyArgs = {
       take: pageSize,
@@ -44,12 +68,17 @@ export const getFeed = async (
       cursor: cursor ? { id: cursor as string } : undefined,
       where: {
         OR: [
-          { userId: { in: connectedUserIds } },
+          { userId: { in: relevantUserIds } },
           { userId },
           {
             AND: [
               { visibility: "public" },
-              { tags: { hasSome: user?.Interests || [] } },
+              {
+                OR: [
+                  { tags: { hasSome: currentUser?.Interests || [] } },
+                  { tags: { hasSome: currentUser?.Skills || [] } },
+                ],
+              },
             ],
           },
         ],

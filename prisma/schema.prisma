@@ -22,6 +22,8 @@ model User {
   Gender            String?
   Skills            String[]
   Interests         String[]
+  class10Board      String?
+  class12Board      String?
   workorProject     String?
   About             String?
   college           String?

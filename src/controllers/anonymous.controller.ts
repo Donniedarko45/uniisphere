@@ -176,7 +176,6 @@ export const endAnonymousChat = async (req: Request, res: Response): Promise<any
              return res.status(403).json({ error: 'You are not authorized to end this chat.' });
         }
 
-        // If chat is already ended, prevent multiple updates/notifications
         if (chat.status === 'ended') {
             console.log(`Chat ${chatId} already ended. User ${userId} tried to end again.`);
             // Optionally update status back to available if somehow missed
@@ -235,3 +234,13 @@ export const endAnonymousChat = async (req: Request, res: Response): Promise<any
         return res.status(500).json({ error: 'Internal server error while ending chat' });
     }
 };
+
+// Current socket.ts lacks anonymous chat event handlers
+// Should add these handlers:
+socket.on("join-anonymous-chat", (userId: string) => {
+  socket.join(userId);
+});
+
+socket.on("anonymous-message", (data: {chatId: string, content: string}) => {
+  // Handle anonymous messages
+});
