@@ -17,7 +17,7 @@ model User {
   lastName          String?
   googleId          String?           @unique
   profilePictureUrl String?
-  headline          String?
+  headline          String[]
   location          String?
   Gender            String?
   Skills            String[]

@@ -13,6 +13,8 @@ import messageRoutes from "./routes/message.routes";
 import postRoutes from "./routes/post.routes";
 import userRoutes from "./routes/user.routes";
 import anonymousChatRoutes from "./routes/anonymousChat.routes";
+import suggestionRoutes from "./routes/suggestionRoutes";
+
 dotenv.config();
 const app = express();
 const httpServer = createServer(app);
@@ -47,3 +49,4 @@ app.use("/api", feedRoutes);
 app.use("/api", blogRoutes)
 app.use("/api/messages", messageRoutes);
 app.use("/api/anonymous", anonymousChatRoutes);
+app.use("/api/suggestions", suggestionRoutes);

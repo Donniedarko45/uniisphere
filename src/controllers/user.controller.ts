@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import prisma from "../config/prisma";
 import cloudinary from "../utils/cloudinary";
 import { PrismaClient } from '@prisma/client';
+import { transferableAbortController } from "util";
 /*
  *
  * we have to implement a search functionality for users where suppose there 2 data in database donniedarko and donniedarko1 when user type donniedarko it should return both the data
@@ -100,6 +101,8 @@ export const updateProfile = async (
       workorProject,
       startYear,
       endYear,
+      class10Board,
+      class12Board,
       profilePictureBase64,
     } = req.body;
 
@@ -192,6 +195,8 @@ export const updateProfile = async (
     if (headline !== undefined) updateData.headline = headline;
     if (Gender !== undefined) updateData.Gender = Gender;
     if (workorProject !== undefined) updateData.workorProject = workorProject;
+    if (class10Board !== undefined) updateData.class10Board = class10Board;
+    if (class12Board !== undefined) updateData.class12Board = class12Board;
     if (college !== undefined) updateData.college = college;
     if (degree !== undefined) updateData.degree = degree;
     if (startYear !== undefined) updateData.startYear = startYear;
@@ -229,6 +234,8 @@ export const updateProfile = async (
         startYear: true,
         endYear: true,
         createdAt: true,
+        class10Board: true,
+        class12Board: true,
         updatedAt: true,
         verified: true
       }
