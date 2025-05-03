@@ -150,7 +150,7 @@ const sendAnonymousMessage = (req, res) => __awaiter(void 0, void 0, void 0, fun
 exports.sendAnonymousMessage = sendAnonymousMessage;
 const endAnonymousChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { chatId } = req.params;
-    const userId = req.body.userId; // Get userId to know who initiated the end
+    const userId = req.body.userId;
     if (!chatId) {
         return res.status(400).json({ error: 'Chat ID is required in URL parameter' });
     }
@@ -166,14 +166,12 @@ const endAnonymousChat = (req, res) => __awaiter(void 0, void 0, void 0, functio
             console.warn(`User ${userId} attempted to end chat ${chatId} they are not part of.`);
             return res.status(403).json({ error: 'You are not authorized to end this chat.' });
         }
-        // If chat is already ended, prevent multiple updates/notifications
         if (chat.status === 'ended') {
             console.log(`Chat ${chatId} already ended. User ${userId} tried to end again.`);
-            // Optionally update status back to available if somehow missed
             yield prisma_1.default.user.updateMany({
                 where: {
                     id: { in: [chat.userId1, chat.userId2] },
-                    status: 'chatting', // Only update if they are still marked as chatting
+                    status: 'chatting',
                 },
                 data: {
                     status: 'available',
@@ -181,7 +179,6 @@ const endAnonymousChat = (req, res) => __awaiter(void 0, void 0, void 0, functio
             });
             return res.status(200).json({ message: 'Chat had already ended.' });
         }
-        // Update chat status to 'ended'
         const updatedChat = yield prisma_1.default.anonymousChat.update({
             where: { id: chatId },
             data: {
@@ -189,24 +186,21 @@ const endAnonymousChat = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 endedAt: new Date(),
             },
         });
-        // *** Update both users' status back to 'available' ***
         yield prisma_1.default.user.updateMany({
             where: {
                 id: { in: [updatedChat.userId1, updatedChat.userId2] },
             },
             data: {
-                status: 'available', // Set them back to available
+                status: 'available',
             },
         });
         console.log(`Chat ${chatId} ended by ${userId}. Users ${updatedChat.userId1} and ${updatedChat.userId2} set to available.`);
-        // Notify both users that the chat has ended
         socket_1.io.to(updatedChat.userId1).emit('chat-ended', { chatId });
         socket_1.io.to(updatedChat.userId2).emit('chat-ended', { chatId });
         return res.status(200).json({ message: 'Chat ended successfully' });
     }
     catch (error) {
         console.error(`Error ending chat ${chatId} by user ${userId}:`, error);
-        // Attempt to reset status if error occurred during ending process
         try {
             const chatUsers = yield prisma_1.default.anonymousChat.findUnique({ where: { id: chatId }, select: { userId1: true, userId2: true } });
             if (chatUsers) {

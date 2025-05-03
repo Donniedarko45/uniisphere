@@ -155,34 +155,33 @@ export const sendAnonymousMessage = async (req: Request, res: Response): Promise
 
 export const endAnonymousChat = async (req: Request, res: Response): Promise<any> => {
     const { chatId } = req.params;
-    const userId = req.body.userId; // Get userId to know who initiated the end
+    const userId = req.body.userId;
 
-     if (!chatId) {
+    if (!chatId) {
         return res.status(400).json({ error: 'Chat ID is required in URL parameter' });
     }
 
     try {
         const chat = await prisma.anonymousChat.findUnique({
-             where: { id: chatId },
+            where: { id: chatId },
         });
 
         if (!chat) {
-             return res.status(404).json({ error: 'Chat not found' });
+            return res.status(404).json({ error: 'Chat not found' });
         }
 
         // Check if user is part of this chat
         if (userId !== chat.userId1 && userId !== chat.userId2) {
-             console.warn(`User ${userId} attempted to end chat ${chatId} they are not part of.`);
-             return res.status(403).json({ error: 'You are not authorized to end this chat.' });
+            console.warn(`User ${userId} attempted to end chat ${chatId} they are not part of.`);
+            return res.status(403).json({ error: 'You are not authorized to end this chat.' });
         }
 
         if (chat.status === 'ended') {
             console.log(`Chat ${chatId} already ended. User ${userId} tried to end again.`);
-            // Optionally update status back to available if somehow missed
-             await prisma.user.updateMany({
+            await prisma.user.updateMany({
                 where: {
                     id: { in: [chat.userId1, chat.userId2] },
-                    status: 'chatting', // Only update if they are still marked as chatting
+                    status: 'chatting',
                 },
                 data: {
                     status: 'available',
@@ -191,7 +190,6 @@ export const endAnonymousChat = async (req: Request, res: Response): Promise<any
             return res.status(200).json({ message: 'Chat had already ended.' });
         }
 
-        // Update chat status to 'ended'
         const updatedChat = await prisma.anonymousChat.update({
             where: { id: chatId },
             data: {
@@ -200,47 +198,33 @@ export const endAnonymousChat = async (req: Request, res: Response): Promise<any
             },
         });
 
-        // *** Update both users' status back to 'available' ***
         await prisma.user.updateMany({
             where: {
                 id: { in: [updatedChat.userId1, updatedChat.userId2] },
             },
             data: {
-                status: 'available', // Set them back to available
+                status: 'available',
             },
         });
-         console.log(`Chat ${chatId} ended by ${userId}. Users ${updatedChat.userId1} and ${updatedChat.userId2} set to available.`);
+        console.log(`Chat ${chatId} ended by ${userId}. Users ${updatedChat.userId1} and ${updatedChat.userId2} set to available.`);
 
-
-        // Notify both users that the chat has ended
         io.to(updatedChat.userId1).emit('chat-ended', { chatId });
         io.to(updatedChat.userId2).emit('chat-ended', { chatId });
 
         return res.status(200).json({ message: 'Chat ended successfully' });
     } catch (error) {
         console.error(`Error ending chat ${chatId} by user ${userId}:`, error);
-         // Attempt to reset status if error occurred during ending process
-         try {
-             const chatUsers = await prisma.anonymousChat.findUnique({ where: { id: chatId }, select: { userId1: true, userId2: true }});
-             if (chatUsers) {
-                 await prisma.user.updateMany({
+        try {
+            const chatUsers = await prisma.anonymousChat.findUnique({ where: { id: chatId }, select: { userId1: true, userId2: true }});
+            if (chatUsers) {
+                await prisma.user.updateMany({
                     where: { id: { in: [chatUsers.userId1, chatUsers.userId2] } },
                     data: { status: 'available' }
-                 });
-             }
-         } catch (resetError) {
+                });
+            }
+        } catch (resetError) {
             console.error(`Failed to reset user status after error ending chat ${chatId}:`, resetError);
-         }
+        }
         return res.status(500).json({ error: 'Internal server error while ending chat' });
     }
 };
-
-// Current socket.ts lacks anonymous chat event handlers
-// Should add these handlers:
-socket.on("join-anonymous-chat", (userId: string) => {
-  socket.join(userId);
-});
-
-socket.on("anonymous-message", (data: {chatId: string, content: string}) => {
-  // Handle anonymous messages
-});

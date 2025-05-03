@@ -22,8 +22,6 @@ model User {
   Gender            String?
   Skills            String[]
   Interests         String[]
-  class10Board      String?
-  class12Board      String?
   workorProject     String?
   About             String?
   college           String?
@@ -31,28 +29,30 @@ model User {
   startYear         Int?
   endYear           Int?
   verified          Boolean           @default(false)
-  isOnline          Boolean           @default(false)
-  status            String            @default("available")
-  lastSeen          DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
-  otps              Otp[]
-  bookmarks         Bookmark[]
-  posts             Post[]
-  blogs             Blogs[]
-  connections1      Connection[]      @relation("UserConnections1")
-  connections2      Connection[]      @relation("UserConnections2")
-  senderMessages    Message[]         @relation("senderMessages")
-  receiverMessages  Message[]         @relation("receiverMessages")
-  groupMessages     GroupMessage[]    @relation("GroupMessageSender")
-  GroupMember       GroupMember[]
-  UserActivity      UserActivity[]
-  Share             Share[]
-  Comments          Comments[]
-  Likes             Likes[]
-  CloudinaryMedia   CloudinaryMedia[]
+  isOnline          Boolean           @default(false)
+  lastSeen          DateTime?
+  status            String            @default("available")
+  class10Board      String?
+  class12Board      String?
   anonymousChats1   AnonymousChat[]   @relation("AnonymousChatUser1")
   anonymousChats2   AnonymousChat[]   @relation("AnonymousChatUser2")
+  blogs             Blogs[]
+  bookmarks         Bookmark[]
+  CloudinaryMedia   CloudinaryMedia[]
+  Comments          Comments[]
+  connections1      Connection[]      @relation("UserConnections1")
+  connections2      Connection[]      @relation("UserConnections2")
+  GroupMember       GroupMember[]
+  groupMessages     GroupMessage[]    @relation("GroupMessageSender")
+  Likes             Likes[]
+  receiverMessages  Message[]         @relation("receiverMessages")
+  senderMessages    Message[]         @relation("senderMessages")
+  otps              Otp[]
+  posts             Post[]
+  Share             Share[]
+  UserActivity      UserActivity[]
 }
 
 model Otp {
@@ -70,8 +70,8 @@ model Comments {
   createdAt DateTime @default(now())
   userId    String
   postId    String
-  user      User     @relation(fields: [userId], references: [id])
   post      Post     @relation(fields: [postId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Likes {
@@ -79,8 +79,8 @@ model Likes {
   createdAt DateTime @default(now())
   userId    String
   postId    String
-  user      User     @relation(fields: [userId], references: [id])
   post      Post     @relation(fields: [postId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, postId])
 }
@@ -88,40 +88,39 @@ model Likes {
 model Share {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-
-  userId String
-  postId String
-  user   User   @relation(fields: [userId], references: [id])
-  post   Post   @relation(fields: [postId], references: [id])
+  userId    String
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Post {
   id         String     @id @default(uuid())
   content    String
-  mediaUrl   String[]
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   postType   String     @default("text")
-  user       User       @relation(fields: [userId], references: [id])
   userId     String
   visibility String     @default("public")
   tags       String[]
   location   String?
-  Share      Share[]
+  mediaUrl   String[]
   Comments   Comments[]
   Likes      Likes[]
+  user       User       @relation(fields: [userId], references: [id])
+  Share      Share[]
 
   @@index([content, tags], map: "PostContentTagsIndex")
 }
 
 model Connection {
   id        String   @id @default(uuid())
-  user1     User     @relation("UserConnections1", fields: [userId1], references: [id])
-  user2     User     @relation("UserConnections2", fields: [userId2], references: [id])
   userId1   String
   userId2   String
   status    String   @default("pending")
   createdAt DateTime @default(now())
+  user1     User     @relation("UserConnections1", fields: [userId1], references: [id])
+  user2     User     @relation("UserConnections2", fields: [userId2], references: [id])
 
   @@unique([userId1, userId2])
 }
@@ -130,10 +129,10 @@ model Message {
   id         String   @id @default(uuid())
   content    String
   createdAt  DateTime @default(now())
-  sender     User     @relation("senderMessages", fields: [senderId], references: [id])
-  receiver   User     @relation("receiverMessages", fields: [receiverId], references: [id])
   senderId   String
   receiverId String
+  receiver   User     @relation("receiverMessages", fields: [receiverId], references: [id])
+  sender     User     @relation("senderMessages", fields: [senderId], references: [id])
 
   @@unique([senderId, receiverId, createdAt])
 }
@@ -163,10 +162,10 @@ model GroupMessage {
   id        String   @id @default(uuid())
   content   String
   createdAt DateTime @default(now())
-  sender    User     @relation("GroupMessageSender", fields: [senderId], references: [id])
-  group     Group    @relation(fields: [groupId], references: [id])
   senderId  String
   groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+  sender    User     @relation("GroupMessageSender", fields: [senderId], references: [id])
 }
 
 model UserActivity {
@@ -182,36 +181,36 @@ model Book {
   id          String     @id @default(uuid())
   title       String
   author      String
-  description String?    @db.Text
+  description String?
   coverUrl    String?
   pdfUrl      String?
-  category    Category   @relation(fields: [categoryId], references: [id])
   categoryId  String
   views       Int        @default(0)
-  bookmarks   Bookmark[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  category    Category   @relation(fields: [categoryId], references: [id])
+  bookmarks   Bookmark[]
 
   @@index([categoryId])
   @@index([title])
 }
 
 model Blogs {
-  id           String    @id @default(uuid())
-  title        String    @db.VarChar(255)
-  description  String?   @db.Text
-  content      String    @db.Text
+  id           String   @id @default(uuid())
+  title        String   @db.VarChar(255)
+  description  String?
+  content      String
   titlePhoto   String?
   contentVideo String[]
   mediaUrl     String[]
-  author       User      @relation(fields: [authorId], references: [id])
   authorId     String
-  published    Boolean   @default(false)
-  views        Int       @default(0)
-  likes        Int       @default(0)
+  published    Boolean  @default(false)
+  views        Int      @default(0)
+  likes        Int      @default(0)
   tags         String[]
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  author       User     @relation(fields: [authorId], references: [id])
 
   @@index([title])
   @@index([authorId])
@@ -221,22 +220,22 @@ model Blogs {
 model Category {
   id          String   @id @default(uuid())
   name        String
-  description String?  @db.Text
-  books       Book[]
+  description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now())
+  books       Book[]
 }
 
 model Bookmark {
   id        String   @id @default(uuid())
   page      Int
-  note      String?  @db.Text
-  book      Book     @relation(fields: [bookId], references: [id])
+  note      String?
   bookId    String
-  user      User     @relation(fields: [userId], references: [id])
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
+  book      Book     @relation(fields: [bookId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([bookId])
   @@index([userId])
@@ -256,12 +255,12 @@ model AnonymousChat {
   id        String             @id @default(uuid())
   userId1   String
   userId2   String
-  user1     User               @relation("AnonymousChatUser1", fields: [userId1], references: [id])
-  user2     User               @relation("AnonymousChatUser2", fields: [userId2], references: [id])
   status    String             @default("active")
-  messages  AnonymousMessage[]
   createdAt DateTime           @default(now())
   endedAt   DateTime?
+  user1     User               @relation("AnonymousChatUser1", fields: [userId1], references: [id])
+  user2     User               @relation("AnonymousChatUser2", fields: [userId2], references: [id])
+  messages  AnonymousMessage[]
 
   @@unique([userId1, userId2])
 }
@@ -272,6 +271,6 @@ model AnonymousMessage {
   senderId  String
   isUser1   Boolean
   createdAt DateTime      @default(now())
-  chat      AnonymousChat @relation(fields: [chatId], references: [id])
   chatId    String
+  chat      AnonymousChat @relation(fields: [chatId], references: [id])
 }

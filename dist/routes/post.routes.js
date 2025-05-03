@@ -20,5 +20,6 @@ router.delete("/:postId", auth_middleware_1.authenticate, auth_middleware_1.veri
 // Protected routes - Social interactions
 router.post("/:postId/comments", auth_middleware_1.authenticate, post_controller_1.createComment);
 router.post("/:postId/like", auth_middleware_1.authenticate, post_controller_1.likePost);
-router.delete("/:postId", auth_middleware_1.authenticate, post_controller_1.unlikePost);
+// Changed from DELETE /:postId to DELETE /:postId/unlike
+router.delete("/:postId/unlike", auth_middleware_1.authenticate, post_controller_1.unlikePost);
 exports.default = router;

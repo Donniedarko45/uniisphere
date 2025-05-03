@@ -23,7 +23,7 @@ const getFeed = (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
             where: {
                 OR: [
                     { userId1: userId, status: "accepted" },
-                    { userId2: userId, status: "accepted" },
+                    { userId2: userId, status: "accepted" }
                 ],
             },
             select: {
@@ -31,25 +31,51 @@ const getFeed = (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
                 userId2: true,
             },
         });
-        const user = yield prisma_1.default.user.findUnique({
+        const currentUser = yield prisma_1.default.user.findUnique({
             where: { id: userId },
-            select: { Interests: true },
+            select: {
+                Interests: true,
+                Skills: true,
+                college: true,
+            },
+        });
+        const similarUsers = yield prisma_1.default.user.findMany({
+            where: {
+                AND: [
+                    { id: { not: userId } },
+                    {
+                        OR: [
+                            { Interests: { hasSome: (currentUser === null || currentUser === void 0 ? void 0 : currentUser.Interests) || [] } },
+                            { Skills: { hasSome: (currentUser === null || currentUser === void 0 ? void 0 : currentUser.Skills) || [] } },
+                            { college: currentUser === null || currentUser === void 0 ? void 0 : currentUser.college },
+                        ],
+                    },
+                ],
+            },
+            select: { id: true },
         });
         const connectedUserIds = userNetwork
             .flatMap((conn) => [conn.userId1, conn.userId2])
             .filter((id) => id !== userId);
+        const similarUserIds = similarUsers.map((user) => user.id);
+        const relevantUserIds = [...new Set([...connectedUserIds, ...similarUserIds])];
         const baseQuery = {
             take: pageSize,
             skip: cursor ? 1 : 0,
             cursor: cursor ? { id: cursor } : undefined,
             where: {
                 OR: [
-                    { userId: { in: connectedUserIds } },
+                    { userId: { in: relevantUserIds } },
                     { userId },
                     {
                         AND: [
                             { visibility: "public" },
-                            { tags: { hasSome: (user === null || user === void 0 ? void 0 : user.Interests) || [] } },
+                            {
+                                OR: [
+                                    { tags: { hasSome: (currentUser === null || currentUser === void 0 ? void 0 : currentUser.Interests) || [] } },
+                                    { tags: { hasSome: (currentUser === null || currentUser === void 0 ? void 0 : currentUser.Skills) || [] } },
+                                ],
+                            },
                         ],
                     },
                 ],
