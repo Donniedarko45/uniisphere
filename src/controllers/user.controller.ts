@@ -104,10 +104,14 @@ export const updateProfile = async (
       class10Board,
       class12Board,
       profilePictureBase64,
+      experiences,
     } = req.body;
 
     const existingUser = await prisma.user.findUnique({
       where: { id: userId },
+      include: {
+        experiences: true,
+      }
     });
 
     if (!existingUser) {
@@ -211,33 +215,64 @@ export const updateProfile = async (
       updateData.profilePictureUrl = profilePictureUrl;
     }
 
+    // Handle experiences update if provided
+    if (experiences) {
+      // Delete removed experiences
+      const experienceIds = experiences
+        .filter((exp: any) => exp.id)
+        .map((exp: any) => exp.id);
+
+      await prisma.experience.deleteMany({
+        where: {
+          userId: userId,
+          id: { notIn: experienceIds }
+        }
+      });
+
+      // Update or create experiences
+      const experiencePromises = experiences.map(async (exp: {
+        id?: string;
+        title: string;
+        organizationName: string;
+        location: string;
+        locationType: string;
+        description: string;
+      }) => {
+        if (exp.id) {
+          // Update existing experience
+          return prisma.experience.update({
+            where: { id: exp.id },
+            data: {
+              title: exp.title,
+              organizationName: exp.organizationName,
+              location: exp.location,
+              locationType: exp.locationType,
+              description: exp.description,
+            }
+          });
+        } else {
+          // Create new experience
+          return prisma.experience.create({
+            data: {
+              title: exp.title,
+              organizationName: exp.organizationName,
+              location: exp.location,
+              locationType: exp.locationType,
+              description: exp.description,
+              userId: userId
+            }
+          });
+        }
+      });
+
+      await Promise.all(experiencePromises);
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        PhoneNumber: true,
-        profilePictureUrl: true,
-        headline: true,
-        location: true,
-        Gender: true,
-        Skills: true,
-        Interests: true,
-        workorProject: true,
-        About: true,
-        college: true,
-        degree: true,
-        startYear: true,
-        endYear: true,
-        createdAt: true,
-        class10Board: true,
-        class12Board: true,
-        updatedAt: true,
-        verified: true
+      include: {
+        experiences: true
       }
     });
 

@@ -6,6 +6,7 @@ import {
   deletePost,
   getPost,
   getTotalPosts,
+  getUserPosts,
   likePost,
   unlikePost,
   updatePost
@@ -45,6 +46,8 @@ router.delete("/:postId",
   verifyUser,
   deletePost
 );
+
+router.get("/getUserAllPost", authenticate, getUserPosts)
 
 // Protected routes - Social interactions
 router.post("/:postId/comments",
