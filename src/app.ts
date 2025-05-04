@@ -15,6 +15,7 @@ import userRoutes from "./routes/user.routes";
 import anonymousChatRoutes from "./routes/anonymousChat.routes";
 import suggestionRoutes from "./routes/suggestionRoutes";
 import bookRoutes from "./routes/book.routes";
+import prisma from "./config/prisma";
 
 dotenv.config();
 const app = express();
@@ -37,7 +38,7 @@ app.set('io', io);
 
 // Start server
 const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
+const serverInstance = httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
@@ -52,3 +53,39 @@ app.use("/api/messages", messageRoutes);
 app.use("/api/anonymous", anonymousChatRoutes);
 app.use("/api/suggestions", suggestionRoutes);
 app.use("/api/books", bookRoutes);
+
+// Graceful shutdown handlers
+const cleanup = async () => {
+  console.log('Shutting down gracefully...');
+  
+  serverInstance.close(() => {
+    console.log('HTTP server closed');
+  });
+
+  if (io) {
+    io.close(() => {
+      console.log('Socket.io server closed');
+    });
+  }
+
+  try {
+    await prisma.$disconnect();
+    console.log('Database connections closed');
+  } catch (err) {
+    console.error('Error during database disconnect:', err);
+  }
+};
+
+process.on('SIGTERM', cleanup);
+process.on('SIGINT', cleanup);
+process.on('uncaughtException', async (err) => {
+  console.error('Uncaught Exception:', err);
+  await cleanup();
+  process.exit(1);
+});
+
+process.on('unhandledRejection', async (err) => {
+  console.error('Unhandled Rejection:', err);
+  await cleanup();
+  process.exit(1);
+});
