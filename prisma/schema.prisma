@@ -39,7 +39,6 @@ model User {
   anonymousChats1   AnonymousChat[]   @relation("AnonymousChatUser1")
   anonymousChats2   AnonymousChat[]   @relation("AnonymousChatUser2")
   blogs             Blogs[]
-  bookmarks         Bookmark[]
   CloudinaryMedia   CloudinaryMedia[]
   Comments          Comments[]
   connections1      Connection[]      @relation("UserConnections1")
@@ -177,7 +176,6 @@ model UserActivity {
   user         User     @relation(fields: [userId], references: [id])
 }
 
-
 model Blogs {
   id           String   @id @default(uuid())
   title        String   @db.VarChar(255)
@@ -198,30 +196,6 @@ model Blogs {
   @@index([title])
   @@index([authorId])
   @@index([createdAt])
-}
-
-model Category {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now())
-  books       Book[]
-}
-
-model Bookmark {
-  id        String   @id @default(uuid())
-  page      Int
-  note      String?
-  bookId    String
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-  book      Book     @relation(fields: [bookId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
-
-  @@index([bookId])
-  @@index([userId])
 }
 
 model CloudinaryMedia {
