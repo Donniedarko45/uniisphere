@@ -9,87 +9,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BookController = void 0;
-const book_1 = require("../type/book");
-const bookService_1 = require("../services/bookService");
-const bookmarkService_1 = require("../services/bookmarkService");
-const bookService = new bookService_1.BookService();
-const bookmarkService = new bookmarkService_1.BookmarkService();
-class BookController {
-    createBook(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const validateData = book_1.BookSchema.parse(req.body);
-                const book = yield bookService.createBook(validateData);
-                res.status(201).json(book);
-            }
-            catch (error) {
-                next(error);
-            }
-        });
+exports.listAllBooks = void 0;
+const book_service_1 = require("../services/book.service");
+const listAllBooks = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const bookService = book_service_1.BookService.getInstance();
+        const books = yield bookService.listAllBooks();
+        res.json(books);
     }
-    getBooks(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const books = yield bookService.getBooks();
-                res.status(200).json(books);
-            }
-            catch (error) {
-                next(error);
-            }
-        });
+    catch (error) {
+        console.error('Error in listAllBooks:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
-    getBookById(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const { id } = req.params;
-                const book = yield bookService.getBookById(id);
-                if (!book) {
-                    res.status(404).json({ message: "Book not found" });
-                }
-                else {
-                    res.status(200).json(book);
-                }
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
-    createBookmark(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            var _a;
-            try {
-                const userId = (_a = req.body) === null || _a === void 0 ? void 0 : _a.userId;
-                if (!userId) {
-                    res.status(401).json({ message: "Unauthorized" });
-                    return;
-                }
-                const validateData = book_1.BookmarkSchema.parse(req.body);
-                const bookmark = yield bookmarkService.createBookmark(userId, validateData);
-                res.status(201).json(bookmark);
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
-    getBookmarks(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const userId = req.userId;
-                const bookId = req.query.bookId;
-                if (!userId) {
-                    res.status(401).json({ message: "Unauthorized" });
-                    return;
-                }
-                const bookmarks = yield bookmarkService.getBookmarks(userId, bookId);
-                res.status(200).json(bookmarks);
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
-}
-exports.BookController = BookController;
+});
+exports.listAllBooks = listAllBooks;

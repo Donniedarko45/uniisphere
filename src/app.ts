@@ -14,6 +14,7 @@ import postRoutes from "./routes/post.routes";
 import userRoutes from "./routes/user.routes";
 import anonymousChatRoutes from "./routes/anonymousChat.routes";
 import suggestionRoutes from "./routes/suggestionRoutes";
+import bookRoutes from "./routes/book.routes";
 
 dotenv.config();
 const app = express();
@@ -50,3 +51,4 @@ app.use("/api", blogRoutes)
 app.use("/api/messages", messageRoutes);
 app.use("/api/anonymous", anonymousChatRoutes);
 app.use("/api/suggestions", suggestionRoutes);
+app.use("/api/books", bookRoutes);

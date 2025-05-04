@@ -177,23 +177,6 @@ model UserActivity {
   user         User     @relation(fields: [userId], references: [id])
 }
 
-model Book {
-  id          String     @id @default(uuid())
-  title       String
-  author      String
-  description String?
-  coverUrl    String?
-  pdfUrl      String?
-  categoryId  String
-  views       Int        @default(0)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  category    Category   @relation(fields: [categoryId], references: [id])
-  bookmarks   Bookmark[]
-
-  @@index([categoryId])
-  @@index([title])
-}
 
 model Blogs {
   id           String   @id @default(uuid())

@@ -13,6 +13,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.802.0",
+    "@aws-sdk/s3-request-presigner": "^3.802.0",
     "@clerk/clerk-sdk-node": "^5.0.52",
     "@prisma/client": "^6.6.0",
     "@types/bcryptjs": "^2.4.6",

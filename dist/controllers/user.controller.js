@@ -84,7 +84,7 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         if (!userId) {
             return res.status(401).json({ error: "Unauthorized" });
         }
-        const { username, firstName, lastName, PhoneNumber, location, college, headline, Gender, Skills, Interests, About, degree, workorProject, startYear, endYear, profilePictureBase64, } = req.body;
+        const { username, firstName, lastName, PhoneNumber, location, college, headline, Gender, Skills, Interests, About, degree, workorProject, startYear, endYear, class10Board, class12Board, profilePictureBase64, } = req.body;
         const existingUser = yield prisma_1.default.user.findUnique({
             where: { id: userId },
         });
@@ -175,6 +175,10 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
             updateData.Gender = Gender;
         if (workorProject !== undefined)
             updateData.workorProject = workorProject;
+        if (class10Board !== undefined)
+            updateData.class10Board = class10Board;
+        if (class12Board !== undefined)
+            updateData.class12Board = class12Board;
         if (college !== undefined)
             updateData.college = college;
         if (degree !== undefined)
@@ -215,6 +219,8 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
                 startYear: true,
                 endYear: true,
                 createdAt: true,
+                class10Board: true,
+                class12Board: true,
                 updatedAt: true,
                 verified: true
             }

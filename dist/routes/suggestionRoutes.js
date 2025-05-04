@@ -4,8 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const book_controller_1 = require("../controllers/book.controller");
+const suggestionController_1 = require("../controllers/suggestionController");
+const auth_middleware_1 = require("../middlewares/auth.middleware");
 const router = express_1.default.Router();
-// Route to list all books
-router.get('/', book_controller_1.listAllBooks);
+router.use(auth_middleware_1.authenticate);
+// Get user suggestions
+router.get('/', auth_middleware_1.authenticate, suggestionController_1.SuggestionController.getSuggestions);
 exports.default = router;
