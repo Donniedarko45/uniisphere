@@ -16,6 +16,7 @@ import anonymousChatRoutes from "./routes/anonymousChat.routes";
 import suggestionRoutes from "./routes/suggestionRoutes";
 import bookRoutes from "./routes/book.routes";
 import prisma from "./config/prisma";
+import connectRouter from './routes/connect';
 
 dotenv.config();
 const app = express();
@@ -54,6 +55,8 @@ app.use("/api/anonymous", anonymousChatRoutes);
 app.use("/api/suggestions", suggestionRoutes);
 app.use("/api/books", bookRoutes);
 
+app.use('/api/connect', connectRouter);
+
 // Graceful shutdown handlers
 const cleanup = async () => {
   console.log('Shutting down gracefully...');
@@ -89,3 +92,5 @@ process.on('unhandledRejection', async (err) => {
   await cleanup();
   process.exit(1);
 });
+
+
