@@ -3,95 +3,117 @@ import prisma from '../config/prisma';
 import { io } from '../utils/socket'; // Make sure io is correctly exported and accessible
 
 export const createAnonymousChat = async (req: Request, res: Response): Promise<any> => {
-    const { nickname } = req.body; // Keep nickname if needed for display later, but not for matching logic
-    const userId = req.body.userId; // Get userId from authenticated request
+    const { nickname } = req.body;
+    const userId = req.body.userId;
 
     if (!userId) {
-        // This should ideally be caught by the authenticate middleware
         return res.status(401).json({ error: 'User not authenticated' });
     }
 
     try {
-        // Ensure the requesting user is marked as available (frontend should have done this, but belt-and-suspenders)
-        // Optional: You might trust the frontend call, but this ensures state.
-        await prisma.user.update({
-            where: { id: userId },
-            data: { status: 'available', isOnline: true }, // Mark as available and online
-        });
-
-        // Look for another available user
-        const waitingUser = await prisma.user.findFirst({
+        // First check if user is already in an active chat
+        const existingChat = await prisma.anonymousChat.findFirst({
             where: {
-                id: { not: userId }, // *** Crucial: Exclude self ***
-                isOnline: true,
-                status: 'available', // *** Crucial: Look for users specifically available for chat ***
-                // Keep the checks to ensure they aren't *already* in an active anonymous chat
-                anonymousChats1: {
-                    none: {
-                        status: 'active',
-                    },
-                },
-                anonymousChats2: {
-                    none: {
-                        status: 'active',
-                    },
-                },
-            },
+                OR: [
+                    { userId1: userId, status: 'active' },
+                    { userId2: userId, status: 'active' }
+                ]
+            }
         });
 
-        if (waitingUser) {
-            // --- Match Found! ---
-            console.log(`Match found between ${userId} and ${waitingUser.id}`);
-
-            // Create the chat room
-            const chat = await prisma.anonymousChat.create({
-                data: {
-                    userId1: waitingUser.id, // Assign consistently (e.g., waiting user is user1)
-                    userId2: userId,         // Requesting user is user2
-                    status: 'active',
-                },
+        if (existingChat) {
+            return res.status(400).json({ 
+                error: 'User already in an active chat',
+                chatId: existingChat.id
             });
-
-            // *** Update both users' status to 'chatting' ***
-            await prisma.user.updateMany({
-                where: {
-                    id: { in: [userId, waitingUser.id] },
-                },
-                data: {
-                    status: 'chatting',
-                },
-            });
-
-            // Emit events to both users via Socket.IO
-            // Ensure users are joined to rooms identified by their userId
-            io.to(waitingUser.id).emit('chat-matched', { chatId: chat.id, isUser1: true }); // waitingUser is user1
-            io.to(userId).emit('chat-matched', { chatId: chat.id, isUser1: false });       // requesting user is user2
-
-            // Return success response to the requesting user
-            return res.status(201).json({
-                message: 'Match found!', // Added message for clarity
-                chatId: chat.id,
-                isUser1: false, // Requesting user is user2 in this setup
-            });
-
-        } else {
-            // --- No Match Found Yet ---
-            console.log(`User ${userId} is waiting for a match...`);
-            // User remains 'available'. Frontend will poll again.
-            return res.status(200).json({ message: 'Waiting for another user to join' });
         }
+
+        // Update user status atomically with a transaction
+        await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id: userId },
+                data: { 
+                    status: 'available', 
+                    isOnline: true,
+                    lastSeen: new Date()
+                },
+            });
+
+            const waitingUser = await tx.user.findFirst({
+                where: {
+                    id: { not: userId },
+                    isOnline: true,
+                    status: 'available',
+                    anonymousChats1: { none: { status: 'active' } },
+                    anonymousChats2: { none: { status: 'active' } },
+                },
+                select: {
+                    id: true,
+                    status: true
+                }
+            });
+
+            if (waitingUser) {
+                // Create chat and update both users' status atomically
+                const chat = await tx.anonymousChat.create({
+                    data: {
+                        userId1: waitingUser.id,
+                        userId2: userId,
+                        status: 'active',
+                    },
+                });
+
+                await tx.user.updateMany({
+                    where: { id: { in: [userId, waitingUser.id] } },
+                    data: { status: 'chatting' },
+                });
+
+                // Emit events after successful database transaction
+                io.to(waitingUser.id).emit('chat-matched', { 
+                    chatId: chat.id, 
+                    isUser1: true,
+                    partnerId: userId 
+                });
+                io.to(userId).emit('chat-matched', { 
+                    chatId: chat.id, 
+                    isUser1: false,
+                    partnerId: waitingUser.id
+                });
+
+                return res.status(201).json({
+                    message: 'Match found!',
+                    chatId: chat.id,
+                    isUser1: false,
+                    partnerId: waitingUser.id
+                });
+            }
+
+            return res.status(200).json({ 
+                message: 'Waiting for another user to join',
+                status: 'waiting'
+            });
+        });
     } catch (error) {
         console.error(`Error in createAnonymousChat for user ${userId}:`, error);
-        // Attempt to reset user status if something went wrong before matching
+        
+        // Attempt to reset user status
         try {
             await prisma.user.update({
                 where: { id: userId },
-                data: { status: 'available' }, // Reset to available on error? Or maybe 'online'? Depends on desired state.
+                data: { 
+                    status: 'online',  // Reset to online instead of available
+                    isOnline: true,
+                    lastSeen: new Date()
+                },
             });
         } catch (resetError) {
-            console.error(`Failed to reset status for user ${userId} after error:`, resetError);
+            console.error(`Failed to reset status for user ${userId}:`, resetError);
         }
-        return res.status(500).json({ error: 'Internal server error during chat creation' });
+        
+        return res.status(500).json({ 
+            error: 'Internal server error during chat creation',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
 };
 
@@ -106,6 +128,10 @@ export const sendAnonymousMessage = async (req: Request, res: Response): Promise
     try {
         const chat = await prisma.anonymousChat.findUnique({
             where: { id: chatId },
+            include: {
+                user1: { select: { id: true } },
+                user2: { select: { id: true } }
+            }
         });
 
         if (!chat) {
@@ -113,43 +139,59 @@ export const sendAnonymousMessage = async (req: Request, res: Response): Promise
         }
 
         if (chat.status !== 'active') {
-            console.log(`Attempt to send message to non-active chat ${chatId} by user ${userId}`);
-            return res.status(400).json({ error: `Chat has ended or is not active (status: ${chat.status})` });
+            return res.status(400).json({ 
+                error: 'Chat is not active',
+                status: chat.status
+            });
         }
 
-        // Verify sender matches isUser1 flag relative to chat participants
+        // Verify sender is part of the chat
         const expectedSenderId = isUser1 ? chat.userId1 : chat.userId2;
         if (userId !== expectedSenderId) {
-             console.warn(`Sender ID mismatch in chat ${chatId}. User ${userId}, isUser1: ${isUser1}. Chat U1: ${chat.userId1}, U2: ${chat.userId2}`);
-             // Decide how strict to be. For now, allow but warn. Could return 403 Forbidden.
-             // return res.status(403).json({ error: 'Sender ID does not match role in chat' });
+            return res.status(403).json({ error: 'You are not authorized to send messages in this chat' });
         }
 
+        // Create message in transaction to ensure consistency
+        const message = await prisma.$transaction(async (tx) => {
+            // Check chat is still active
+            const currentChat = await tx.anonymousChat.findUnique({
+                where: { id: chatId }
+            });
+            
+            if (currentChat?.status !== 'active') {
+                throw new Error('Chat is no longer active');
+            }
 
-        const message = await prisma.anonymousMessage.create({
-            data: {
-                chatId,
-                content,
-                senderId: userId,
-                isUser1, // Store who sent it relative to the chat setup
-            },
+            return tx.anonymousMessage.create({
+                data: {
+                    chatId,
+                    content,
+                    senderId: userId,
+                    isUser1,
+                },
+            });
         });
 
-        // Emit message to the *other* user
+        // Determine recipient
         const recipientId = isUser1 ? chat.userId2 : chat.userId1;
-        // Pass the message object, and also explicitly pass `isUser1` of the *sender*
-        // so the recipient knows if it came from their "user1" or "user2" partner.
+
+        // Emit message to recipient
         io.to(recipientId).emit('anonymous-message', {
-            ...message, // Send full message details
-            // isUser1 here refers to the *sender* of the message
+            ...message,
+            recipientId,
+            chatId
         });
-        console.log(`Message sent in chat ${chatId} from ${userId} (isUser1: ${isUser1}) to ${recipientId}`);
 
-
-        return res.status(201).json(message);
+        return res.status(201).json({
+            message: 'Message sent successfully',
+            data: message
+        });
     } catch (error) {
-        console.error(`Error sending anonymous message for chat ${chatId} by user ${userId}:`, error);
-        return res.status(500).json({ error: 'Internal server error while sending message' });
+        console.error(`Error sending anonymous message in chat ${chatId}:`, error);
+        return res.status(500).json({ 
+            error: 'Failed to send message',
+            details: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
 };
 

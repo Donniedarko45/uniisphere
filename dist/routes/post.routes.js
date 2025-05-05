@@ -17,6 +17,7 @@ router.get("/stats/total", auth_middleware_1.authenticate, post_controller_1.get
 router.post("/", auth_middleware_1.authenticate, auth_middleware_1.verifyUser, upload_middleware_1.upload.array("media", 5), post_controller_1.createPost);
 router.put("/:postId", auth_middleware_1.authenticate, auth_middleware_1.verifyUser, post_controller_1.updatePost);
 router.delete("/:postId", auth_middleware_1.authenticate, auth_middleware_1.verifyUser, post_controller_1.deletePost);
+router.get("/getUserAllPost", auth_middleware_1.authenticate, post_controller_1.getUserPosts);
 // Protected routes - Social interactions
 router.post("/:postId/comments", auth_middleware_1.authenticate, post_controller_1.createComment);
 router.post("/:postId/like", auth_middleware_1.authenticate, post_controller_1.likePost);

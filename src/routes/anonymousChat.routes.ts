@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import {
-	createAnonymousChat,
-	endAnonymousChat,
-	sendAnonymousMessage
+  createAnonymousChat,
+  endAnonymousChat,
+  sendAnonymousMessage
 } from '../controllers/anonymous.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 

@@ -84,9 +84,12 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         if (!userId) {
             return res.status(401).json({ error: "Unauthorized" });
         }
-        const { username, firstName, lastName, PhoneNumber, location, college, headline, Gender, Skills, Interests, About, degree, workorProject, startYear, endYear, class10Board, class12Board, profilePictureBase64, } = req.body;
+        const { username, firstName, lastName, PhoneNumber, location, college, headline, Gender, Skills, Interests, About, degree, workorProject, startYear, endYear, class10Board, class12Board, profilePictureBase64, experiences, } = req.body;
         const existingUser = yield prisma_1.default.user.findUnique({
             where: { id: userId },
+            include: {
+                experiences: true,
+            }
         });
         if (!existingUser) {
             return res.status(404).json({ error: "User not found" });
@@ -196,33 +199,54 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         if ('profilePictureBase64' in req.body || req.file) {
             updateData.profilePictureUrl = profilePictureUrl;
         }
+        // Handle experiences update if provided
+        if (experiences) {
+            // Delete removed experiences
+            const experienceIds = experiences
+                .filter((exp) => exp.id)
+                .map((exp) => exp.id);
+            yield prisma_1.default.experience.deleteMany({
+                where: {
+                    userId: userId,
+                    id: { notIn: experienceIds }
+                }
+            });
+            // Update or create experiences
+            const experiencePromises = experiences.map((exp) => __awaiter(void 0, void 0, void 0, function* () {
+                if (exp.id) {
+                    // Update existing experience
+                    return prisma_1.default.experience.update({
+                        where: { id: exp.id },
+                        data: {
+                            title: exp.title,
+                            organizationName: exp.organizationName,
+                            location: exp.location,
+                            locationType: exp.locationType,
+                            description: exp.description,
+                        }
+                    });
+                }
+                else {
+                    // Create new experience
+                    return prisma_1.default.experience.create({
+                        data: {
+                            title: exp.title,
+                            organizationName: exp.organizationName,
+                            location: exp.location,
+                            locationType: exp.locationType,
+                            description: exp.description,
+                            userId: userId
+                        }
+                    });
+                }
+            }));
+            yield Promise.all(experiencePromises);
+        }
         const updatedUser = yield prisma_1.default.user.update({
             where: { id: userId },
             data: updateData,
-            select: {
-                id: true,
-                username: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                PhoneNumber: true,
-                profilePictureUrl: true,
-                headline: true,
-                location: true,
-                Gender: true,
-                Skills: true,
-                Interests: true,
-                workorProject: true,
-                About: true,
-                college: true,
-                degree: true,
-                startYear: true,
-                endYear: true,
-                createdAt: true,
-                class10Board: true,
-                class12Board: true,
-                updatedAt: true,
-                verified: true
+            include: {
+                experiences: true
             }
         });
         return res.status(200).json({

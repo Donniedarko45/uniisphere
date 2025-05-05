@@ -1,6 +1,6 @@
 import cors from "cors";
 import dotenv from "dotenv";
-import express from "express";
+import express, { Request, Response } from "express";
 import { createServer } from "http";
 import http from "http";
 import blogRoutes from "./routes/blogs.routes"
@@ -36,28 +36,33 @@ const io = setupSocket(server);
 // Store io instance on app for use in routes if needed
 app.set('io', io);
 
+// Simple health check endpoint
+app.get('/health', (_req, res) => {
+  res.status(200).send('OK');
+});
+
+// API routes
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/posts", postRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api", connectionRoutes);
+app.use("/api/anonymous", anonymousChatRoutes);
+app.use("/api", feedRoutes);
+app.use("/api", blogRoutes);
+app.use("/api/books", bookRoutes);
+app.use("/api/suggestions", suggestionRoutes);
+
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 const serverInstance = httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-app.use("/api", connectionRoutes);
-app.use("/auth", authRoutes);
-app.use("/posts", postRoutes);
-app.use("/users", userRoutes);
-app.use("/getProfile", getProfile);
-app.use("/api", feedRoutes);
-app.use("/api", blogRoutes)
-app.use("/api/messages", messageRoutes);
-app.use("/api/anonymous", anonymousChatRoutes);
-app.use("/api/suggestions", suggestionRoutes);
-app.use("/api/books", bookRoutes);
-
 // Graceful shutdown handlers
 const cleanup = async () => {
   console.log('Shutting down gracefully...');
-  
+
   serverInstance.close(() => {
     console.log('HTTP server closed');
   });
@@ -78,6 +83,7 @@ const cleanup = async () => {
 
 process.on('SIGTERM', cleanup);
 process.on('SIGINT', cleanup);
+
 process.on('uncaughtException', async (err) => {
   console.error('Uncaught Exception:', err);
   await cleanup();
@@ -89,3 +95,6 @@ process.on('unhandledRejection', async (err) => {
   await cleanup();
   process.exit(1);
 });
+
+// Export the Express app instance
+module.exports = app;

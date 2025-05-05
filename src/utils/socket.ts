@@ -78,10 +78,10 @@ export const setupSocket = (server: any) => {
       chatId: string,
       content: string,
       isUser1: boolean,
-      senderId: string
+      senderId: string,
+      recipientId: string
     }) => {
-      const recipientId = data.isUser1 ? data.chatId : data.senderId;
-      io.to(recipientId).emit("anonymous-message", data);
+      io.to(data.recipientId).emit("anonymous-message", data);
     });
 
     socket.on("disconnected", () => {
