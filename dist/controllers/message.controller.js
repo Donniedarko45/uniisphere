@@ -42,7 +42,6 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 .status(403)
                 .json({ error: "Users must be connected to send messages" });
         }
-        // Create the message
         const message = yield prisma_1.default.message.create({
             data: {
                 senderId,

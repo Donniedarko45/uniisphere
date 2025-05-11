@@ -17,23 +17,23 @@ class SuggestionService {
         let score = 0;
         const matchedSkills = [];
         const matchedInterests = [];
-        // Calculate skills match
-        user.Skills.forEach(skill => {
-            if (otherUser.Skills.includes(skill)) {
+        const userSkills = user.Skills || [];
+        const otherUserSkills = otherUser.Skills || [];
+        userSkills.forEach(skill => {
+            if (otherUserSkills.includes(skill)) {
                 score += 2;
                 matchedSkills.push(skill);
             }
         });
-        // Calculate interests match
-        user.Interests.forEach(interest => {
-            if (otherUser.Interests.includes(interest)) {
+        const userInterests = user.Interests || [];
+        const otherUserInterests = otherUser.Interests || [];
+        userInterests.forEach(interest => {
+            if (otherUserInterests.includes(interest)) {
                 score += 1.5;
                 matchedInterests.push(interest);
             }
         });
-        // Add score for mutual connections
         score += mutualConnectionsCount * 3;
-        // Add score for same college/degree
         if (user.college && otherUser.college && user.college === otherUser.college) {
             score += 2;
         }
@@ -50,23 +50,40 @@ class SuggestionService {
     }
     static getSuggestedUsers(userId_1) {
         return __awaiter(this, arguments, void 0, function* (userId, limit = 10) {
-            // Get the current user
             const currentUser = yield prisma.user.findUnique({
                 where: { id: userId },
-                include: {
-                    connections1: true,
-                    connections2: true,
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    profilePictureUrl: true,
+                    headline: true,
+                    Skills: true,
+                    Interests: true,
+                    college: true,
+                    degree: true,
+                    connections1: {
+                        select: {
+                            userId2: true
+                        }
+                    },
+                    connections2: {
+                        select: {
+                            userId1: true
+                        }
+                    }
                 }
             });
+            console.log("current User" + currentUser);
             if (!currentUser) {
                 throw new Error('User not found');
             }
-            // Get all connected user IDs
             const connectedUserIds = new Set([
                 ...currentUser.connections1.map(c => c.userId2),
                 ...currentUser.connections2.map(c => c.userId1)
             ]);
-            // Get potential users (excluding current user and already connected users)
+            console.log("connected user" + connectedUserIds);
             const potentialUsers = yield prisma.user.findMany({
                 where: {
                     AND: [
@@ -74,14 +91,31 @@ class SuggestionService {
                         { id: { notIn: Array.from(connectedUserIds) } }
                     ]
                 },
-                include: {
-                    connections1: true,
-                    connections2: true,
+                select: {
+                    id: true,
+                    username: true,
+                    firstName: true,
+                    lastName: true,
+                    profilePictureUrl: true,
+                    headline: true,
+                    Skills: true,
+                    Interests: true,
+                    college: true,
+                    degree: true,
+                    connections1: {
+                        select: {
+                            userId2: true
+                        }
+                    },
+                    connections2: {
+                        select: {
+                            userId1: true
+                        }
+                    }
                 }
             });
-            // Calculate scores for each potential user
+            console.log(potentialUsers);
             const scoredUsers = yield Promise.all(potentialUsers.map((user) => __awaiter(this, void 0, void 0, function* () {
-                // Calculate mutual connections
                 const mutualConnections = yield prisma.connection.count({
                     where: {
                         OR: [
@@ -101,9 +135,18 @@ class SuggestionService {
                     }
                 });
                 const matchScore = this.calculateMatchScore(currentUser, user, mutualConnections);
-                return Object.assign(Object.assign({}, user), { matchScore });
+                return {
+                    id: user.id,
+                    username: user.username,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    profilePictureUrl: user.profilePictureUrl,
+                    headline: user.headline || [],
+                    Skills: user.Skills || [],
+                    Interests: user.Interests || [],
+                    matchScore
+                };
             })));
-            // Sort by score and return top suggestions
             return scoredUsers
                 .sort((a, b) => b.matchScore.score - a.matchScore.score)
                 .slice(0, limit);

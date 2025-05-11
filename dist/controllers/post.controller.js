@@ -18,30 +18,71 @@ const cloudinary_1 = __importDefault(require("../utils/cloudinary"));
 const createPost = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { content, userId, visibility, tags, location } = req.body;
     try {
-        const mediaUrls = []; // Changed variable name to be more clear
-        // Handle multiple files
-        if (req.files && Array.isArray(req.files)) {
+        const mediaUrls = [];
+        // Check if files exist in the request
+        if (!req.files || !Array.isArray(req.files)) {
+            console.log('No files uploaded or invalid file format');
+        }
+        else {
+            // Handle file uploads
             for (const file of req.files) {
-                const result = yield cloudinary_1.default.uploader.upload(file.path, {
-                    folder: "posts",
-                    resource_type: "auto",
-                });
-                mediaUrls.push(result.secure_url);
+                try {
+                    // Check if file path exists
+                    if (!file.path) {
+                        console.log(`No path found for file: ${file.originalname}`);
+                        continue;
+                    }
+                    const result = yield cloudinary_1.default.uploader.upload(file.path, {
+                        folder: "posts",
+                        resource_type: "auto",
+                    });
+                    if (result && result.secure_url) {
+                        mediaUrls.push(result.secure_url);
+                    }
+                    else {
+                        console.log(`Failed to upload file: ${file.originalname}`);
+                    }
+                }
+                catch (uploadError) {
+                    console.error(`Error uploading file ${file.originalname}:`, uploadError);
+                }
             }
         }
+        // Create post even if some files failed to upload
         const post = yield prisma_1.default.post.create({
             data: {
                 content,
-                mediaUrl: mediaUrls, // Now matches the string[] type in schema
+                mediaUrl: mediaUrls,
                 userId,
                 visibility,
-                tags: tags ? tags.split(",") : [],
+                //@ts-ignore
+                tags: tags ? tags.split(",").map(tag => tag.trim()) : [],
                 location,
             },
+            include: {
+                user: {
+                    select: {
+                        username: true,
+                        profilePictureUrl: true,
+                    }
+                },
+                _count: {
+                    select: {
+                        Likes: true,
+                        Comments: true,
+                    }
+                }
+            }
         });
-        res.status(201).json(post);
+        res.status(201).json({
+            success: true,
+            post,
+            mediaUrls,
+            message: mediaUrls.length ? 'Post created with media' : 'Post created without media'
+        });
     }
     catch (error) {
+        console.error('Error in createPost:', error);
         next(error);
     }
 });

@@ -1,67 +1,76 @@
 import cors from "cors";
 import dotenv from "dotenv";
-import express, { Request, Response } from "express";
-import { createServer } from "http";
+import express from "express";
+import fs from 'fs';
 import http from "http";
-import blogRoutes from "./routes/blogs.routes"
-import { setupSocket } from "./utils/socket";
-import { getProfile } from "./controllers/user.controller";
+import path from 'path';
+import prisma from "./config/prisma";
 import authRoutes from "./routes/auth.routes";
+import blogRoutes from "./routes/blogs.routes";
+import bookRoutes from "./routes/book.routes";
 import connectionRoutes from "./routes/connection.routes";
 import feedRoutes from "./routes/feed.routes";
+import humanRoutes from "./routes/humanLib.routes";
 import messageRoutes from "./routes/message.routes";
 import postRoutes from "./routes/post.routes";
-import userRoutes from "./routes/user.routes";
-import anonymousChatRoutes from "./routes/anonymousChat.routes";
 import suggestionRoutes from "./routes/suggestionRoutes";
-import bookRoutes from "./routes/book.routes";
-import prisma from "./config/prisma";
+import userRoutes from "./routes/user.routes";
+import { setupHumanLibSocket } from "./services/humanLibSocket";
+import { setupSocket } from "./utils/socket";
 
 dotenv.config();
-const app = express();
-const httpServer = createServer(app);
 
-// Middleware
+const app = express();
+
+app.use(express.json());
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN,
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
-  }),
-);
-app.use(express.json());
+  })
+)
 
-const server = http.createServer(app);
-const io = setupSocket(server);
-// Store io instance on app for use in routes if needed
-app.set('io', io);
 
-// Simple health check endpoint
-app.get('/health', (_req, res) => {
-  res.status(200).send('OK');
-});
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 
-// API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/connections", connectionRoutes);
 app.use("/api/messages", messageRoutes);
-app.use("/api", connectionRoutes);
-app.use("/api/anonymous", anonymousChatRoutes);
-app.use("/api", feedRoutes);
-app.use("/api", blogRoutes);
-app.use("/api/books", bookRoutes);
+app.use("/api/feed", feedRoutes);
+app.use("/api/blogs", blogRoutes);
+app.use("/api/human-lib", humanRoutes);
 app.use("/api/suggestions", suggestionRoutes);
+app.use("/api/books", bookRoutes);
 
-// Start server
+app.use('/public', express.static(path.join(__dirname, '../public')));
+
+// Create upload directory if it doesn't exist
+const uploadDir = path.join(__dirname, '../public/temp');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const server = http.createServer(app);
+
+
+const io = setupSocket(server);
+
+const humanLibIo = setupHumanLibSocket(io);
+
+app.set('io', io);
+app.set('humanLibIo', humanLibIo);
+
 const PORT = process.env.PORT || 8000;
-const serverInstance = httpServer.listen(PORT, () => {
+const serverInstance = server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// Graceful shutdown handlers
 const cleanup = async () => {
-  console.log('Shutting down gracefully...');
+  console.log('Shutting down server...');
 
   serverInstance.close(() => {
     console.log('HTTP server closed');
@@ -96,5 +105,4 @@ process.on('unhandledRejection', async (err) => {
   process.exit(1);
 });
 
-// Export the Express app instance
 module.exports = app;

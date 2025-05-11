@@ -39,7 +39,6 @@ export const sendMessage = async (req: AuthenticatedRequest, res: Response) => {
         .json({ error: "Users must be connected to send messages" });
     }
 
-    // Create the message
     const message = await prisma.message.create({
       data: {
         senderId,

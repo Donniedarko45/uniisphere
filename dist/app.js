@@ -15,57 +15,59 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const express_1 = __importDefault(require("express"));
-const http_1 = require("http");
-const http_2 = __importDefault(require("http"));
-const blogs_routes_1 = __importDefault(require("./routes/blogs.routes"));
-const socket_1 = require("./utils/socket");
+const fs_1 = __importDefault(require("fs"));
+const http_1 = __importDefault(require("http"));
+const path_1 = __importDefault(require("path"));
+const prisma_1 = __importDefault(require("./config/prisma"));
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
+const blogs_routes_1 = __importDefault(require("./routes/blogs.routes"));
+const book_routes_1 = __importDefault(require("./routes/book.routes"));
 const connection_routes_1 = __importDefault(require("./routes/connection.routes"));
 const feed_routes_1 = __importDefault(require("./routes/feed.routes"));
+const humanLib_routes_1 = __importDefault(require("./routes/humanLib.routes"));
 const message_routes_1 = __importDefault(require("./routes/message.routes"));
 const post_routes_1 = __importDefault(require("./routes/post.routes"));
-const user_routes_1 = __importDefault(require("./routes/user.routes"));
-const anonymousChat_routes_1 = __importDefault(require("./routes/anonymousChat.routes"));
 const suggestionRoutes_1 = __importDefault(require("./routes/suggestionRoutes"));
-const book_routes_1 = __importDefault(require("./routes/book.routes"));
-const prisma_1 = __importDefault(require("./config/prisma"));
+const user_routes_1 = __importDefault(require("./routes/user.routes"));
+const humanLibSocket_1 = require("./services/humanLibSocket");
+const socket_1 = require("./utils/socket");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const httpServer = (0, http_1.createServer)(app);
-// Middleware
+app.use(express_1.default.json());
 app.use((0, cors_1.default)({
     origin: process.env.CORS_ORIGIN,
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
 }));
-app.use(express_1.default.json());
-const server = http_2.default.createServer(app);
-const io = (0, socket_1.setupSocket)(server);
-// Store io instance on app for use in routes if needed
-app.set('io', io);
-// Simple health check endpoint
-app.get('/health', (_req, res) => {
-    res.status(200).send('OK');
-});
-// API routes
+app.use(express_1.default.urlencoded({ extended: true }));
+app.use((0, cors_1.default)());
 app.use("/api/auth", auth_routes_1.default);
 app.use("/api/users", user_routes_1.default);
 app.use("/api/posts", post_routes_1.default);
+app.use("/api/connections", connection_routes_1.default);
 app.use("/api/messages", message_routes_1.default);
-app.use("/api", connection_routes_1.default);
-app.use("/api/anonymous", anonymousChat_routes_1.default);
-app.use("/api", feed_routes_1.default);
-app.use("/api", blogs_routes_1.default);
-app.use("/api/books", book_routes_1.default);
+app.use("/api/feed", feed_routes_1.default);
+app.use("/api/blogs", blogs_routes_1.default);
+app.use("/api/human-lib", humanLib_routes_1.default);
 app.use("/api/suggestions", suggestionRoutes_1.default);
-// Start server
+app.use("/api/books", book_routes_1.default);
+app.use('/public', express_1.default.static(path_1.default.join(__dirname, '../public')));
+// Create upload directory if it doesn't exist
+const uploadDir = path_1.default.join(__dirname, '../public/temp');
+if (!fs_1.default.existsSync(uploadDir)) {
+    fs_1.default.mkdirSync(uploadDir, { recursive: true });
+}
+const server = http_1.default.createServer(app);
+const io = (0, socket_1.setupSocket)(server);
+const humanLibIo = (0, humanLibSocket_1.setupHumanLibSocket)(io);
+app.set('io', io);
+app.set('humanLibIo', humanLibIo);
 const PORT = process.env.PORT || 8000;
-const serverInstance = httpServer.listen(PORT, () => {
+const serverInstance = server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-// Graceful shutdown handlers
 const cleanup = () => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('Shutting down gracefully...');
+    console.log('Shutting down server...');
     serverInstance.close(() => {
         console.log('HTTP server closed');
     });
@@ -94,5 +96,4 @@ process.on('unhandledRejection', (err) => __awaiter(void 0, void 0, void 0, func
     yield cleanup();
     process.exit(1);
 }));
-// Export the Express app instance
 module.exports = app;

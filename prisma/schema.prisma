@@ -36,8 +36,8 @@ model User {
   class10Board      String?
   class12Board      String?
   headline          String[]
-  anonymousChats1   AnonymousChat[]   @relation("AnonymousChatUser1")
-  anonymousChats2   AnonymousChat[]   @relation("AnonymousChatUser2")
+  //anonymousChats1   AnonymousChat[]   @relation("AnonymousChatUser1")
+  //anonymousChats2   AnonymousChat[]   @relation("AnonymousChatUser2")
   blogs             Blogs[]
   CloudinaryMedia   CloudinaryMedia[]
   Comments          Comments[]
@@ -53,7 +53,59 @@ model User {
   Share             Share[]
   UserActivity      UserActivity[]
   experiences       Experience[]
+  humanLibReceived  HumanLib[]        @relation("HumanLibReceiver")
+  humanLibSent      HumanLib[]        @relation("HumanLibSender")
+  File              File[]
 }
+
+model HumanLib {
+  id         String   @id @default(uuid())
+  userId     String
+  nickname   String
+  content    String
+  isOnline   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  senderId   String
+  receiverId String
+  receiver   User     @relation("HumanLibReceiver", fields: [receiverId], references: [id])
+  sender     User     @relation("HumanLibSender", fields: [senderId], references: [id])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  content    String
+  createdAt  DateTime @default(now())
+  senderId   String
+  receiverId String
+  receiver   User     @relation("receiverMessages", fields: [receiverId], references: [id])
+  sender     User     @relation("senderMessages", fields: [senderId], references: [id])
+
+  @@unique([senderId, receiverId, createdAt])
+}
+
+/**
+ * model AnonymousChat {
+ * id        String             @id @default(uuid())
+ * userId1   String
+ * userId2   String
+ * status    String             @default("active")
+ * createdAt DateTime           @default(now())
+ * endedAt   DateTime?
+ * user1     User               @relation("AnonymousChatUser1", fields: [userId1], references: [id])
+ * user2     User               @relation("AnonymousChatUser2", fields: [userId2], references: [id])
+ * messages  AnonymousMessage[]
+ * @@unique([userId1, userId2])
+ * }
+ * model AnonymousMessage {
+ * id        String        @id @default(uuid())
+ * content   String
+ * senderId  String
+ * isUser1   Boolean
+ * createdAt DateTime      @default(now())
+ * chatId    String
+ * chat      AnonymousChat @relation(fields: [chatId], references: [id])
+ * }
+ */
 
 model Otp {
   id        String   @id @default(uuid())
@@ -72,6 +124,15 @@ model Comments {
   postId    String
   post      Post     @relation(fields: [postId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model File {
+  id           String   @id @default(uuid())
+  url          String
+  type         String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  uploadedAt   DateTime @default(now())
+  uploadedById String
 }
 
 model Likes {
@@ -123,18 +184,6 @@ model Connection {
   user2     User     @relation("UserConnections2", fields: [userId2], references: [id])
 
   @@unique([userId1, userId2])
-}
-
-model Message {
-  id         String   @id @default(uuid())
-  content    String
-  createdAt  DateTime @default(now())
-  senderId   String
-  receiverId String
-  receiver   User     @relation("receiverMessages", fields: [receiverId], references: [id])
-  sender     User     @relation("senderMessages", fields: [senderId], references: [id])
-
-  @@unique([senderId, receiverId, createdAt])
 }
 
 model Group {
@@ -209,39 +258,15 @@ model CloudinaryMedia {
   user         User     @relation(fields: [userId], references: [id])
 }
 
-model AnonymousChat {
-  id        String             @id @default(uuid())
-  userId1   String
-  userId2   String
-  status    String             @default("active")
-  createdAt DateTime           @default(now())
-  endedAt   DateTime?
-  user1     User               @relation("AnonymousChatUser1", fields: [userId1], references: [id])
-  user2     User               @relation("AnonymousChatUser2", fields: [userId2], references: [id])
-  messages  AnonymousMessage[]
-
-  @@unique([userId1, userId2])
-}
-
-model AnonymousMessage {
-  id        String        @id @default(uuid())
-  content   String
-  senderId  String
-  isUser1   Boolean
-  createdAt DateTime      @default(now())
-  chatId    String
-  chat      AnonymousChat @relation(fields: [chatId], references: [id])
-}
-
 model Experience {
-  id              String   @id @default(uuid())
-  title           String
+  id               String   @id @default(uuid())
+  title            String
   organizationName String
-  location        String?
-  locationType    String?
-  description     String?
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  location         String?
+  locationType     String?
+  description      String?
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

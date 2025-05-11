@@ -75,8 +75,7 @@ const setupSocket = (server) => {
             console.log(`User ${userId} left anonymous chat room`);
         });
         socket.on("anonymous-message", (data) => {
-            const recipientId = data.isUser1 ? data.chatId : data.senderId;
-            io.to(recipientId).emit("anonymous-message", data);
+            io.to(data.recipientId).emit("anonymous-message", data);
         });
         socket.on("disconnected", () => {
             console.log("Client disconnected", socket.id);

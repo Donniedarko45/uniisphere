@@ -1,5 +1,7 @@
-import multer, { FileFilterCallback } from "multer";
 import { Request } from "express";
+import fs from 'fs';
+import multer, { FileFilterCallback } from "multer";
+import path from 'path';
 
 const storage = multer.diskStorage({
   destination: function (
@@ -7,7 +9,16 @@ const storage = multer.diskStorage({
     file: Express.Multer.File,
     cb: (error: Error | null, destination: string) => void,
   ) {
-    cb(null, "./public/temp");
+    const uploadPath = path.join(__dirname, '../../public/temp');
+    // Create directory if it doesn't exist
+    try {
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true, mode: 0o755 });
+      }
+      cb(null, uploadPath);
+    } catch (error) {
+      cb(error as Error, uploadPath);
+    }
   },
   filename: function (
     req: Request,

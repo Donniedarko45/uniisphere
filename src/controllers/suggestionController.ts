@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import { SuggestionService } from '../services/suggestionService';
 
 interface AuthRequest extends Request {
-    userId?: string;
-  }
+  userId?: string;
+}
 
 export class SuggestionController {
   public static async getSuggestions(req: AuthRequest, res: Response): Promise<any> {
@@ -14,9 +14,9 @@ export class SuggestionController {
       const userId = req.userId;
 
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      
+
       const suggestions = await SuggestionService.getSuggestedUsers(userId as string, limit);
-      
+
       return res.json({
         success: true,
         data: suggestions.map(user => ({
@@ -36,7 +36,7 @@ export class SuggestionController {
       });
     } catch (error) {
       console.error('Error in getSuggestions:', error);
-      return res.status(500).json({ 
+      return res.status(500).json({
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
