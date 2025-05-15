@@ -15,7 +15,7 @@ class SuggestionController {
     static getSuggestions(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                if (!req.user) {
+                if (!req.userId) {
                     return res.status(401).json({ error: 'Unauthorized' });
                 }
                 const userId = req.userId;

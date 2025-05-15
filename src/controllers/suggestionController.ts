@@ -8,7 +8,7 @@ interface AuthRequest extends Request {
 export class SuggestionController {
   public static async getSuggestions(req: AuthRequest, res: Response): Promise<any> {
     try {
-      if (!req.user) {
+      if (!req.userId) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
       const userId = req.userId;

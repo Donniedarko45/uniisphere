@@ -4,12 +4,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.upload = void 0;
+const fs_1 = __importDefault(require("fs"));
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const storage = multer_1.default.diskStorage({
     destination: function (req, file, cb) {
         const uploadPath = path_1.default.join(__dirname, '../../public/temp');
-        cb(null, uploadPath);
+        // Create directory if it doesn't exist
+        try {
+            if (!fs_1.default.existsSync(uploadPath)) {
+                fs_1.default.mkdirSync(uploadPath, { recursive: true, mode: 0o755 });
+            }
+            cb(null, uploadPath);
+        }
+        catch (error) {
+            cb(error, uploadPath);
+        }
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
