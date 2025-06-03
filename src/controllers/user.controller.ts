@@ -3,9 +3,10 @@ import prisma from "../config/prisma";
 import cloudinary from "../utils/cloudinary";
 import { PrismaClient } from '@prisma/client';
 import { transferableAbortController } from "util";
+
 /*
  *
- * we have to implement a search functionality for users where suppose there 2 data in database donniedarko and donniedarko1 when user type donniedarko it should return both the data
+ we have to implement a search functionality for users where suppose there 2 data in database donniedarko and donniedarko1 when user type donniedarko it should return both the data
  *
  */
 

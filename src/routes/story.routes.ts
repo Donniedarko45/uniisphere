@@ -1,11 +1,12 @@
 import express from 'express';
 import { createStory, getStories, viewStory, deleteStory } from '../controllers/story.controller';
 import { authenticate } from '../middlewares/auth.middleware';
+import { storyUpload } from '../middlewares/upload.middleware';
 
 const router = express.Router();
 
-// Create a new story
-router.post('/', authenticate, createStory as any);
+// Create a new story (supports both file upload and direct URL)
+router.post('/', authenticate, storyUpload.single('media'), createStory as any);
 
 // Get all stories from connected users
 router.get('/', authenticate, getStories as any);

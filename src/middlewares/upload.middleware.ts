@@ -29,6 +29,7 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + "-" + file.originalname);
   },
 });
+
 export const upload = multer({
   storage,
   limits: {
@@ -49,6 +50,35 @@ export const upload = multer({
       return cb(null, true);
     } else {
       cb(new Error("Error: File type not supported!"));
+    }
+  },
+});
+
+// Enhanced upload middleware for stories (supports images and videos)
+export const storyUpload = multer({
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB for stories (to accommodate videos)
+  },
+  fileFilter: (
+    req: Request,
+    file: Express.Multer.File,
+    cb: FileFilterCallback,
+  ) => {
+    // Allow images and videos for stories
+    const allowedImageTypes = /jpeg|jpg|png|gif/;
+    const allowedVideoTypes = /mp4|avi|mov|wmv|flv|webm/;
+    
+    const isImage = allowedImageTypes.test(file.mimetype);
+    const isVideo = allowedVideoTypes.test(file.mimetype);
+    
+    const imageMimetypeCheck = file.mimetype.startsWith('image/');
+    const videoMimetypeCheck = file.mimetype.startsWith('video/');
+
+    if ((isImage && imageMimetypeCheck) || (isVideo && videoMimetypeCheck)) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Error: Only images (JPEG, JPG, PNG, GIF) and videos (MP4, AVI, MOV, WMV, FLV, WEBM) are supported for stories!"));
     }
   },
 });

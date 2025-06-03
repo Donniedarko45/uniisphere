@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { ApiError } from '../utils/ApiError';
+import cloudinary from '../utils/cloudinary';
 
 const prisma = new PrismaClient();
 
@@ -19,17 +20,49 @@ export const createStory = async (req: AuthenticatedRequest, res: Response): Pro
       throw new ApiError(401, 'Unauthorized - User not authenticated');
     }
 
-    if (!mediaUrl) {
-      throw new ApiError(400, 'Media URL is required');
+    let finalMediaUrl = '';
+
+    // Handle file upload if a file is provided
+    if (req.file) {
+      try {
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "stories",
+          resource_type: "auto", // This handles both images and videos
+          transformation: type === 'video' ? [] : [
+            { width: 1080, height: 1920, crop: "fill" }, // Story format (9:16 ratio)
+            { quality: "auto" }
+          ]
+        });
+        
+        finalMediaUrl = result.secure_url;
+
+        // Save media info to CloudinaryMedia table
+        await prisma.cloudinaryMedia.create({
+          data: {
+            publicId: result.public_id,
+            url: result.secure_url,
+            resourceType: type,
+            userId
+          }
+        });
+      } catch (error) {
+        console.error("Error uploading story media:", error);
+        throw new ApiError(400, 'Failed to upload story media');
+      }
+    } else if (mediaUrl) {
+      // Use provided mediaUrl if no file upload
+      finalMediaUrl = mediaUrl;
+    } else {
+      throw new ApiError(400, 'Either upload a file or provide a media URL');
     }
 
     const story = await prisma.story.create({
       data: {
         userId,
-        mediaUrl,
+        mediaUrl: finalMediaUrl,
         type,
         duration,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
       },
       include: {
         user: {
