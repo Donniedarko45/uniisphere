@@ -5,6 +5,8 @@ import fs from 'fs';
 import http from "http";
 import path from 'path';
 import prisma from "./config/prisma";
+import redisManager from "./config/redis";
+import { generalLimiter } from "./middlewares/rateLimiter.middleware";
 import authRoutes from "./routes/auth.routes";
 import blogRoutes from "./routes/blogs.routes";
 import bookRoutes from "./routes/book.routes";
@@ -23,6 +25,9 @@ import { setupSocket } from "./utils/socket";
 dotenv.config();
 
 const app = express();
+
+// Apply general rate limiting to all requests
+app.use(generalLimiter);
 
 app.use(express.json());
 app.use(
@@ -84,6 +89,13 @@ const cleanup = async () => {
     io.close(() => {
       console.log('Socket.io server closed');
     });
+  }
+
+  try {
+    await redisManager.disconnect();
+    console.log('Redis connections closed');
+  } catch (err) {
+    console.error('Error during Redis disconnect:', err);
   }
 
   try {

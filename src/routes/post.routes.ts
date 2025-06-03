@@ -13,6 +13,12 @@ import {
 } from "../controllers/post.controller";
 import { authenticate, verifyUser } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
+import { 
+  postLimiter, 
+  uploadLimiter, 
+  dbIntensiveLimiter,
+  searchLimiter 
+} from "../middlewares/rateLimiter.middleware";
 
 const router = Router();
 
@@ -31,6 +37,8 @@ router.get("/stats/total", authenticate, getTotalPosts);
 router.post("/",
   authenticate,
   verifyUser,
+  postLimiter,
+  uploadLimiter,
   upload.array("media", 5),
   createPost
 );
@@ -57,6 +65,7 @@ router.post("/:postId/comments",
 
 router.post("/:postId/like",
   authenticate,
+  verifyUser,
   likePost
 );
 

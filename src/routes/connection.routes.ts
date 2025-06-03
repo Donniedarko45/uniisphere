@@ -8,16 +8,24 @@ import {
   sendConnectionRequest
 } from "../controllers/connection.controller";
 import { authenticate } from "../middlewares/auth.middleware";
+import { 
+  connectionLimiter, 
+  dbIntensiveLimiter 
+} from "../middlewares/rateLimiter.middleware";
 
 const app = express();
 const router = Router();
 
 app.use(express.urlencoded({ extended: true }));
 
-router.post("/connect/:userId", authenticate, sendConnectionRequest);
+// Apply connection rate limiting to prevent spam
+router.post("/connect/:userId", authenticate, connectionLimiter, sendConnectionRequest);
 router.post('/accept/:connectionId', authenticate, acceptConnection);
-router.post('/getPending/', authenticate, getPendingRequests);
 router.post('/decline/:connectionId', authenticate, declineConnection);
-router.get('/connections', authenticate, getConnections);
-router.get('/stats/:userId', authenticate, getConnectionStats); // New endpoint
+
+// Apply database intensive limiter to routes that fetch multiple connections
+router.post('/getPending/', authenticate, dbIntensiveLimiter, getPendingRequests);
+router.get('/connections', authenticate, dbIntensiveLimiter, getConnections);
+router.get('/stats/:userId', authenticate, getConnectionStats);
+
 export default router;

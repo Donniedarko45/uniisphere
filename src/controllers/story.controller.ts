@@ -22,21 +22,19 @@ export const createStory = async (req: AuthenticatedRequest, res: Response): Pro
 
     let finalMediaUrl = '';
 
-    // Handle file upload if a file is provided
     if (req.file) {
       try {
         const result = await cloudinary.uploader.upload(req.file.path, {
           folder: "stories",
-          resource_type: "auto", // This handles both images and videos
+          resource_type: "auto", 
           transformation: type === 'video' ? [] : [
-            { width: 1080, height: 1920, crop: "fill" }, // Story format (9:16 ratio)
+            { width: 1080, height: 1920, crop: "fill" }, 
             { quality: "auto" }
           ]
         });
         
         finalMediaUrl = result.secure_url;
 
-        // Save media info to CloudinaryMedia table
         await prisma.cloudinaryMedia.create({
           data: {
             publicId: result.public_id,
@@ -50,7 +48,6 @@ export const createStory = async (req: AuthenticatedRequest, res: Response): Pro
         throw new ApiError(400, 'Failed to upload story media');
       }
     } else if (mediaUrl) {
-      // Use provided mediaUrl if no file upload
       finalMediaUrl = mediaUrl;
     } else {
       throw new ApiError(400, 'Either upload a file or provide a media URL');
@@ -62,7 +59,7 @@ export const createStory = async (req: AuthenticatedRequest, res: Response): Pro
         mediaUrl: finalMediaUrl,
         type,
         duration,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) 
       },
       include: {
         user: {
