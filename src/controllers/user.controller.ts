@@ -19,12 +19,16 @@ export const getProfile = async (
   try {
     const { userId } = req.query;
     const { search } = req.query;
+    const requestingUserId = req.body.userId; // The user making the request
+
     if (!userId && !search) {
       return res
         .status(400)
         .json({ message: "Either userId or search term is required" });
     }
-    const user = await prisma.user.findMany({
+
+    // First get the user(s) based on search or userId
+    const users = await prisma.user.findMany({
       where: {
         OR: [
           { id: userId as string },
@@ -61,10 +65,62 @@ export const getProfile = async (
         }
       },
     });
-    if (!user) {
+
+    if (!users || users.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.status(200).json(user);
+
+    // For each user, check if they are connected with the requesting user
+    const processedUsers = await Promise.all(users.map(async (user) => {
+      // Skip connection check if it's the same user
+      if (user.id === requestingUserId) {
+        return {
+          ...user,
+          isConnected: true,
+          isOwnProfile: true
+        };
+      }
+
+
+      const connection = await prisma.connection.findFirst({
+        where: {
+          OR: [
+            { userId1: requestingUserId, userId2: user.id, status: "accepted" },
+            { userId1: user.id, userId2: requestingUserId, status: "accepted" }
+          ]
+        }
+      });
+
+      const isConnected = !!connection;
+
+      // If not connected, return limited profile information
+      if (!isConnected) {
+        return {
+          id: user.id,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          headline: user.headline,
+          About: user.About,
+          profilePictureUrl: user.profilePictureUrl,
+          college: user.college,
+          degree: user.degree,
+          location: user.location,
+          _count: user._count,
+          isConnected: false,
+          isOwnProfile: false
+        };
+      }
+
+      // If connected, return full profile information
+      return {
+        ...user,
+        isConnected: true,
+        isOwnProfile: false
+      };
+    }));
+
+    res.status(200).json(processedUsers);
   } catch (err) {
     console.error(next(err));
   }
