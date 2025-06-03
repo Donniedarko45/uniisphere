@@ -13,6 +13,8 @@ import feedRoutes from "./routes/feed.routes";
 import humanRoutes from "./routes/humanLib.routes";
 import messageRoutes from "./routes/message.routes";
 import postRoutes from "./routes/post.routes";
+import shareRoutes from "./routes/sharePost.routes";
+import storyRoutes from "./routes/story.routes";
 import suggestionRoutes from "./routes/suggestionRoutes";
 import userRoutes from "./routes/user.routes";
 import { setupHumanLibSocket } from "./services/humanLibSocket";
@@ -45,6 +47,8 @@ app.use("/api/blogs", blogRoutes);
 app.use("/api/human-lib", humanRoutes);
 app.use("/api/suggestions", suggestionRoutes);
 app.use("/api/books", bookRoutes);
+app.use("/api/shares", shareRoutes);
+app.use("/api/stories", storyRoutes);
 
 app.use('/public', express.static(path.join(__dirname, '../public')));
 

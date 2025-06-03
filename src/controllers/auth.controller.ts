@@ -164,7 +164,7 @@ export const completeProfile = async (
       firstName,
       lastName,
       password,
-      PhoneNumber,
+      Semester,
       location,
       college,
       headline,
@@ -176,7 +176,7 @@ export const completeProfile = async (
       workorProject,
       startYear,
       endYear,
-      profilePictureBase64, // Add this to accept base64 image
+      profilePictureBase64,
     } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
@@ -191,9 +191,7 @@ export const completeProfile = async (
 
     let profilePictureUrl = "";
 
-    // Handle profile picture - check both file upload and base64 string
     if (req.file) {
-      // Existing file upload logic
       try {
         const result = await cloudinary.uploader.upload(req.file.path, {
           folder: "profile_pictures",
@@ -273,10 +271,10 @@ export const completeProfile = async (
         firstName,
         lastName,
         passwordHash: hashedPassword,
-        PhoneNumber,
         profilePictureUrl,
         location,
         About,
+        Semester,
         headline,
         Gender,
         workorProject,
@@ -462,7 +460,6 @@ export const resetPassword = async (
   try {
     const { email, otp, newPassword } = req.body;
 
-    // Updated password validation with clearer regex and error messages
     const passwordValidation = {
       minLength: newPassword.length >= 8,
       hasUpper: /[A-Z]/.test(newPassword),
@@ -519,16 +516,13 @@ export const resetPassword = async (
       return res.status(400).json({ error: "OTP expired. Request a new OTP" });
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update password
     await prisma.user.update({
       where: { id: user.id },
       data: { passwordHash: hashedPassword },
     });
 
-    // Delete used OTP
     await prisma.otp.delete({
       where: { id: otpRecord.id },
     });
