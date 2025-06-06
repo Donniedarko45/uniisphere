@@ -1,288 +1,224 @@
-import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { ApiError } from '../utils/ApiError';
-import cloudinary from '../utils/cloudinary';
+import cloudinary from "../utils/cloudinary";
+import { NextFunction, Request, Response } from "express";
+import { string, z } from "zod";
+import fs from "fs";
+import { ResourceLimits } from "worker_threads";
+import prisma from "../config/prisma";
+import { error } from "console";
+import path from "path";
 
-const prisma = new PrismaClient();
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-  };
+interface AuthRequest extends Request {
+  userId?: string;
 }
 
-export const createStory = async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+
+export const createStory = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<any> => {
   try {
-    const userId = req.user?.id;
-    const { mediaUrl, type = 'image', duration = 8 } = req.body;
+    const { caption, mediaType } = req.body;
+    const userId = req.userId;
 
-    if (!userId) {
-      throw new ApiError(401, 'Unauthorized - User not authenticated');
-    }
-
-    let finalMediaUrl = '';
-
-    if (req.file) {
-      try {
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          folder: "stories",
-          resource_type: "auto", 
-          transformation: type === 'video' ? [] : [
-            { width: 1080, height: 1920, crop: "fill" }, 
-            { quality: "auto" }
-          ]
-        });
-        
-        finalMediaUrl = result.secure_url;
-
-        await prisma.cloudinaryMedia.create({
-          data: {
-            publicId: result.public_id,
-            url: result.secure_url,
-            resourceType: type,
-            userId
-          }
-        });
-      } catch (error) {
-        console.error("Error uploading story media:", error);
-        throw new ApiError(400, 'Failed to upload story media');
-      }
-    } else if (mediaUrl) {
-      finalMediaUrl = mediaUrl;
-    } else {
-      throw new ApiError(400, 'Either upload a file or provide a media URL');
-    }
-
-    const story = await prisma.story.create({
-      data: {
-        userId,
-        mediaUrl: finalMediaUrl,
-        type,
-        duration,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) 
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            profilePictureUrl: true
-          }
-        }
-      }
+   if(!userId){
+    console.log("userId is not found"+userId)
+    return res.status(400).json({
+      error: "userId is not found",
     });
-
-    await prisma.userActivity.create({
-      data: {
-        userId,
-        activityType: 'CREATE_STORY',
-        targetId: story.id
-      }
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: 'Story created successfully',
-      data: story
-    });
-  } catch (error: any) {
-    if (error instanceof ApiError) {
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message
+  }
+    console.log("userId!!!!!", userId);
+    console.log("req.body", req.body);
+  
+    if (!req.file) {
+      return res.status(400).json({
+        error: "no media file uploaded",
       });
     }
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
+    console.log("File details:", {
+      path: req.file.path,
+      mimetype: req.file.mimetype,
+      size: req.file.size
     });
+    
+    let mediaUrl: string;
+    try {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "stories",
+        resource_type: "auto",
+      });
+      console.log("Cloudinary upload successful:", result.secure_url);
+      mediaUrl = result.secure_url;
+     // console.log(mediaUrl);
+    } catch (uploadError) {
+      console.error("Cloudinary upload error (continuing with local file):", uploadError);
+    }
+
+    try {
+      const story = await prisma.story.create({
+        data: {
+          userId,
+          //@ts-ignore
+          mediaUrl:mediaUrl,
+          type: mediaType,
+          duration: 5,
+          caption: caption,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+
+      console.log("story", story);
+      return res.status(201).json({ story });
+    } catch (error) {
+      console.error("error in creating story:", error);
+      next(error)
+    }
+  } catch (err: any) {
+    console.error("Story creation error:", err);
+    res.status(500).json({ error: err.message });
   }
 };
 
-export const getStories = async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+export const getStories = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<any> => {
   try {
-    const userId = req.user?.id;
-
-    if (!userId) {
-      throw new ApiError(401, 'Unauthorized - User not authenticated');
-    }
-
-    const connections = await prisma.connection.findMany({
-      where: {
-        OR: [
-          { userId1: userId },
-          { userId2: userId }
-        ],
-        status: 'accepted'
-      }
-    });
-
-    const connectedUserIds = connections.map(conn =>
-      conn.userId1 === userId ? conn.userId2 : conn.userId1
-    );
-
+    const now = new Date();
     const stories = await prisma.story.findMany({
       where: {
-        userId: {
-          in: [...connectedUserIds, userId]
-        },
-        expiresAt: {
-          gt: new Date()
-        }
+        expiresAt: { gt: now },
       },
+      orderBy: { createdAt: "desc" },
       include: {
         user: {
           select: {
             id: true,
             username: true,
-            profilePictureUrl: true
-          }
+            profilePictureUrl: true,
+          },
         },
         views: {
-          select: {
-            userId: true
-          }
-        }
+          where: {
+            viewerId: req.userId,
+          },
+        },
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
     });
 
-    const groupedStories = stories.reduce((acc: any, story) => {
-      const userId = story.userId;
-      if (!acc[userId]) {
-        acc[userId] = {
-          user: story.user,
-          stories: []
-        };
-      }
-      acc[userId].stories.push(story);
-      return acc;
-    }, {});
+    const grouped = stories.reduce(
+      (acc, story) => {
+        const userId = story.userId;
+        if (!acc[userId]) acc[userId] = { user: story.user, stories: [] };
+        acc[userId].stories.push({
+          ...story,
+          isViewed: story.views.length > 0,
+        });
+        return acc;
+      },
+      {} as Record<string, any>,
+    );
 
-    return res.status(200).json({
-      success: true,
-      data: Object.values(groupedStories)
-    });
-  } catch (error: any) {
-    if (error instanceof ApiError) {
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    }
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
+    res.json(Object.values(grouped));
+  } catch (err) {
+    res.status(500).json({
+      error: "failed to fetch stories.",
     });
   }
 };
 
-export const viewStory = async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+export const viewStory = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<any> => {
+  const storyId = req.params.id;
+  const viewerId = req.userId;
+
+  if (!viewerId) {
+    return res.status(401).json({
+      error: "Unauthorized - Viewer ID not found",
+    });
+  }
+
   try {
-    const userId = req.user?.id;
-    const { storyId } = req.params;
-
-    if (!userId) {
-      throw new ApiError(401, 'Unauthorized - User not authenticated');
-    }
-
-    const story = await prisma.story.findFirst({
+    const existing = await prisma.storyView.findUnique({
       where: {
-        id: storyId,
-        expiresAt: {
-          gt: new Date()
-        }
-      }
+        storyId_viewerId: {
+          storyId,
+          viewerId,
+        },
+      },
     });
 
-    if (!story) {
-      throw new ApiError(404, 'Story not found or has expired');
-    }
-
-    const existingView = await prisma.storyView.findFirst({
-      where: {
-        storyId,
-        userId
-      }
-    });
-
-    if (!existingView) {
+    if (!existing) {
       await prisma.storyView.create({
         data: {
           storyId,
-          userId
-        }
-      });
-
-      await prisma.userActivity.create({
-        data: {
-          userId,
-          activityType: 'VIEW_STORY',
-          targetId: storyId
-        }
+          viewerId,
+        },
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      message: 'Story viewed successfully'
-    });
-  } catch (error: any) {
-    if (error instanceof ApiError) {
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    }
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    res.status(200).json({ message: "Marked as viewed" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to mark as viewed" });
   }
 };
 
-export const deleteStory = async (req: AuthenticatedRequest, res: Response): Promise<any> => {
+export const deleteStory = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<any> => {
+  const storyId = req.params.id;
+  const userId = req.userId;
+
+  console.log('Delete Story - Params:', { storyId, userId });
+
   try {
-    const userId = req.user?.id;
-    const { storyId } = req.params;
-
-    if (!userId) {
-      throw new ApiError(401, 'Unauthorized - User not authenticated');
-    }
-
-    const story = await prisma.story.findFirst({
-      where: {
-        id: storyId,
-        userId
-      }
+    console.log('Attempting to find story:', storyId);
+    const story = await prisma.story.findUnique({
+      where: { id: storyId },
     });
+
+    console.log('Found story:', story);
 
     if (!story) {
-      throw new ApiError(404, 'Story not found or unauthorized');
+      return res.status(404).json({ error: "Story not found" });
     }
 
-    await prisma.story.delete({
-      where: {
-        id: storyId
+    if (story.userId !== userId) {
+      return res
+        .status(403)
+        .json({ error: "Unauthorized to delete this story" });
+    }
+
+    // Try to delete from Cloudinary but don't let it block the story deletion
+    if (story.mediaUrl) {
+      try {
+        console.log('Attempting to delete from cloudinary:', story.mediaUrl);
+        await cloudinary.uploader.destroy(story.mediaUrl);
+        console.log('Successfully deleted from Cloudinary');
+      } catch (cloudinaryError) {
+        console.error('Failed to delete from Cloudinary:', cloudinaryError);
+        // Continue with story deletion even if Cloudinary fails
       }
+    }
+
+    console.log('Deleting story views');
+    await prisma.storyView.deleteMany({
+      where: { storyId },
     });
 
-    return res.status(200).json({
-      success: true,
-      message: 'Story deleted successfully'
+    console.log('Deleting story');
+    await prisma.story.delete({
+      where: { id: storyId },
     });
-  } catch (error: any) {
-    if (error instanceof ApiError) {
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message
-      });
-    }
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+
+    console.log('Story deleted successfully');
+    res.json({ message: "Story deleted successfully" });
+  } catch (err) {
+    console.error('Delete story error details:', err);
+    next(err);
   }
 };

@@ -1,18 +1,23 @@
 import { Router } from "express";
-import { getAllUsers, getProfile, updateProfile, updateUserStatus } from "../controllers/user.controller";
+import {
+  getAllUsers,
+  getProfile,
+  updateProfile,
+  updateUserStatus,
+} from "../controllers/user.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
-import { 
-  searchLimiter, 
-  uploadLimiter, 
-  dbIntensiveLimiter 
+import {
+  searchLimiter,
+  uploadLimiter,
+  dbIntensiveLimiter,
 } from "../middlewares/rateLimiter.middleware";
 
 const router = Router();
 
 // Get user profile - supports either userId or search param as query strings
 // Apply search limiter since this can be used for searching users
-router.get("/profile", searchLimiter, getProfile);
+router.get("/profile", getProfile);
 
 // Update profile - needs authentication and potential file upload
 router.patch(
@@ -20,11 +25,11 @@ router.patch(
   authenticate,
   uploadLimiter,
   upload.single("profilePicture"),
-  updateProfile
+  updateProfile,
 );
 
 // Get all users (database intensive operation)
-router.get("/", dbIntensiveLimiter, getAllUsers);
+router.get("/", getAllUsers);
 
 // Get profile by userId as a URL parameter (alternative style)
 router.get("/profile/:userId", async (req, res, next) => {

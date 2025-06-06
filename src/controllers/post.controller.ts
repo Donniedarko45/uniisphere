@@ -131,7 +131,8 @@ export const deletePost = async (
       prisma.share.deleteMany({
         where: { postId }
       }),
-      // Finally delete the post
+
+      //after deleting all the data related to the post, delete the post
       prisma.post.delete({
         where: { id: postId }
       })

@@ -59,6 +59,8 @@ model User {
   File              File[]
   stories           Story[]
   storyViews        StoryView[]
+  notifications     Notification[]    @relation("UserNotifications")
+  actorNotifications Notification[]   @relation("ActorNotifications")
 }
 
 model HumanLib {
@@ -278,8 +280,9 @@ model Story {
   id        String      @id @default(uuid())
   userId    String
   mediaUrl  String
-  type      String      @default("image") // image or video
-  duration  Int         @default(5) // in seconds
+  type      String      @default("image")  
+  duration  Int         @default(5) 
+  caption   String?
   createdAt DateTime    @default(now())
   expiresAt DateTime
   user      User        @relation(fields: [userId], references: [id])
@@ -292,10 +295,35 @@ model Story {
 model StoryView {
   id        String   @id @default(uuid())
   storyId   String
-  userId    String
-  createdAt DateTime @default(now())
-  story     Story    @relation(fields: [storyId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  viewerId  String
+  viewedAt  DateTime @default(now())
 
-  @@unique([storyId, userId])
+  story     Story    @relation(fields: [storyId], references: [id])
+  viewer    User     @relation(fields: [viewerId], references: [id])
+
+  @@unique([storyId, viewerId]) // Only one view per user per story
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String   // User who receives the notification
+  actorId     String?  // User who performed the action (nullable for system notifications)
+  type        String   // Type of notification
+  title       String   // Notification title
+  message     String   // Notification message
+  targetId    String?  // ID of the related entity (post, user, etc.)
+  targetType  String?  // Type of the related entity (post, user, comment, etc.)
+  metadata    Json?    // Additional data for the notification
+  isRead      Boolean  @default(false)
+  priority    String   @default("normal") // low, normal, high, urgent
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  actor       User?    @relation("ActorNotifications", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@map("notifications")
 }
