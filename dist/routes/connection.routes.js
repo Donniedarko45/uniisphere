@@ -36,16 +36,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importStar(require("express"));
 const connection_controller_1 = require("../controllers/connection.controller");
 const auth_middleware_1 = require("../middlewares/auth.middleware");
-const rateLimiter_middleware_1 = require("../middlewares/rateLimiter.middleware");
 const app = (0, express_1.default)();
 const router = (0, express_1.Router)();
 app.use(express_1.default.urlencoded({ extended: true }));
 // Apply connection rate limiting to prevent spam
-router.post("/connect/:userId", auth_middleware_1.authenticate, rateLimiter_middleware_1.connectionLimiter, connection_controller_1.sendConnectionRequest);
-router.post('/accept/:connectionId', auth_middleware_1.authenticate, connection_controller_1.acceptConnection);
-router.post('/decline/:connectionId', auth_middleware_1.authenticate, connection_controller_1.declineConnection);
+router.post("/connect/:userId", auth_middleware_1.authenticate, connection_controller_1.sendConnectionRequest);
+router.post("/accept/:connectionId", auth_middleware_1.authenticate, connection_controller_1.acceptConnection);
+router.post("/decline/:connectionId", auth_middleware_1.authenticate, connection_controller_1.declineConnection);
 // Apply database intensive limiter to routes that fetch multiple connections
-router.post('/getPending/', auth_middleware_1.authenticate, rateLimiter_middleware_1.dbIntensiveLimiter, connection_controller_1.getPendingRequests);
-router.get('/connections', auth_middleware_1.authenticate, rateLimiter_middleware_1.dbIntensiveLimiter, connection_controller_1.getConnections);
-router.get('/stats/:userId', auth_middleware_1.authenticate, connection_controller_1.getConnectionStats);
+router.post("/getPending/", auth_middleware_1.authenticate, connection_controller_1.getPendingRequests);
+router.get("/connections", auth_middleware_1.authenticate, connection_controller_1.getConnections);
+router.get("/stats/:userId", auth_middleware_1.authenticate, connection_controller_1.getConnectionStats);
 exports.default = router;

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getTotalPosts = exports.unlikePost = exports.likePost = exports.createComment = exports.getUserPosts = exports.getPost = exports.deletePost = exports.updatePost = exports.createPost = void 0;
+exports.getPostLikes = exports.getTotalPosts = exports.unlikePost = exports.likePost = exports.createComment = exports.getUserPosts = exports.getPost = exports.deletePost = exports.updatePost = exports.createPost = void 0;
 const prisma_1 = __importDefault(require("../config/prisma"));
 const cloudinary_1 = __importDefault(require("../utils/cloudinary"));
 const createPost = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -251,8 +251,8 @@ const getTotalPosts = (req, res, next) => __awaiter(void 0, void 0, void 0, func
                     select: {
                         Likes: true,
                         Comments: true,
-                    },
-                },
+                    }
+                }
             },
         });
         res.status(200).json({ totalPosts });
@@ -262,3 +262,54 @@ const getTotalPosts = (req, res, next) => __awaiter(void 0, void 0, void 0, func
     }
 });
 exports.getTotalPosts = getTotalPosts;
+const getPostLikes = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { postId } = req.params;
+        // First check if the post exists
+        const post = yield prisma_1.default.post.findUnique({
+            where: { id: postId },
+        });
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
+        }
+        // Get all likes for the post with user information
+        const likes = yield prisma_1.default.likes.findMany({
+            where: { postId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        profilePictureUrl: true,
+                        firstName: true,
+                        lastName: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc', // Most recent likes first
+            },
+        });
+        // Extract user information from likes
+        const likedUsers = likes.map(like => ({
+            id: like.user.id,
+            username: like.user.username,
+            profilePictureUrl: like.user.profilePictureUrl,
+            firstName: like.user.firstName,
+            lastName: like.user.lastName,
+            fullName: `${like.user.firstName || ''} ${like.user.lastName || ''}`.trim(),
+            likedAt: like.createdAt,
+        }));
+        res.status(200).json({
+            success: true,
+            postId,
+            totalLikes: likes.length,
+            likedBy: likedUsers,
+        });
+    }
+    catch (error) {
+        console.error("Error getting post likes:", error);
+        next(error);
+    }
+});
+exports.getPostLikes = getPostLikes;

@@ -18,8 +18,8 @@ const listAllBooks = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.json(books);
     }
     catch (error) {
-        console.error('Error in listAllBooks:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error("Error in listAllBooks:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 exports.listAllBooks = listAllBooks;

@@ -5,15 +5,14 @@ import { ApiError } from '../utils/ApiError';
 const prisma = new PrismaClient();
 
 interface AuthenticatedRequest extends Request {
-    user?: {
-        id: string;
-    };
+    userId?: string;
 }
 
 export const sharePost = async (req: AuthenticatedRequest, res: Response):Promise<any> => {
     try {
         const { postId } = req.params;
-        const userId = req.user?.id;
+        const { message } = req.body; // Extract message from request body
+        const userId = req.userId;
 
         if (!userId) {
             throw new ApiError(401, 'Unauthorized - User not authenticated');
@@ -37,6 +36,21 @@ export const sharePost = async (req: AuthenticatedRequest, res: Response):Promis
             throw new ApiError(404, 'Post not found');
         }
 
+        // Check if user has already shared this post
+        const existingShare = await prisma.share.findFirst({
+            where: {
+                userId,
+                postId
+            }
+        });
+
+        if (existingShare) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already shared this post'
+            });
+        }
+
         // Create share record
         const share = await prisma.share.create({
             data: {
@@ -58,37 +72,59 @@ export const sharePost = async (req: AuthenticatedRequest, res: Response):Promis
             }
         });
 
-        // Create user activity record
+        // Create user activity record with optional message
         await prisma.userActivity.create({
             data: {
                 userId,
                 activityType: 'SHARE_POST',
                 targetId: postId
+                // Note: If you want to store the message, you can add it to metadata field
+                // metadata: message ? { message } : undefined
             }
+        });
+
+        // Get updated share count
+        const shareCount = await prisma.share.count({
+            where: { postId }
         });
 
         return res.status(201).json({
             success: true,
             message: 'Post shared successfully',
-            data: share
+            data: {
+                ...share,
+                shareCount
+            }
         });
     } catch (error: any) {
+        console.error('Share post error:', error);
+        
         if (error instanceof ApiError) {
             return res.status(error.statusCode).json({
                 success: false,
                 message: error.message
             });
         }
+        
+        // Handle unique constraint violations (duplicate shares)
+        if (error.code === 'P2002') {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already shared this post'
+            });
+        }
+        
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Internal server error',
+            ...(process.env.NODE_ENV === 'development' && { error: error.message })
         });
     }
 };
 
 export const getSharedPosts = async (req: AuthenticatedRequest, res: Response):Promise<any> => {
     try {
-        const userId = req.user?.id;
+        const userId = req.userId;
 
         if (!userId) {
             throw new ApiError(401, 'Unauthorized - User not authenticated');
@@ -110,7 +146,14 @@ export const getSharedPosts = async (req: AuthenticatedRequest, res: Response):P
                         },
                         Likes: true,
                         Comments: true,
-                        Share: true
+                        Share: true,
+                        _count: {
+                            select: {
+                                Likes: true,
+                                Comments: true,
+                                Share: true
+                            }
+                        }
                     }
                 }
             },
@@ -121,9 +164,12 @@ export const getSharedPosts = async (req: AuthenticatedRequest, res: Response):P
 
         return res.status(200).json({
             success: true,
+            count: sharedPosts.length,
             data: sharedPosts
         });
     } catch (error: any) {
+        console.error('Get shared posts error:', error);
+        
         if (error instanceof ApiError) {
             return res.status(error.statusCode).json({
                 success: false,
@@ -132,7 +178,68 @@ export const getSharedPosts = async (req: AuthenticatedRequest, res: Response):P
         }
         return res.status(500).json({
             success: false,
-            message: 'Internal server error'
+            message: 'Internal server error',
+            ...(process.env.NODE_ENV === 'development' && { error: error.message })
+        });
+    }
+};
+
+export const unsharePost = async (req: AuthenticatedRequest, res: Response):Promise<any> => {
+    try {
+        const { postId } = req.params;
+        const userId = req.userId;
+
+        if (!userId) {
+            throw new ApiError(401, 'Unauthorized - User not authenticated');
+        }
+
+        // Check if the share exists
+        const existingShare = await prisma.share.findFirst({
+            where: {
+                userId,
+                postId
+            }
+        });
+
+        if (!existingShare) {
+            return res.status(404).json({
+                success: false,
+                message: 'Share not found or you have not shared this post'
+            });
+        }
+
+        // Delete the share record
+        await prisma.share.delete({
+            where: {
+                id: existingShare.id
+            }
+        });
+
+        // Get updated share count
+        const shareCount = await prisma.share.count({
+            where: { postId }
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Post unshared successfully',
+            data: {
+                shareCount
+            }
+        });
+    } catch (error: any) {
+        console.error('Unshare post error:', error);
+        
+        if (error instanceof ApiError) {
+            return res.status(error.statusCode).json({
+                success: false,
+                message: error.message
+            });
+        }
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            ...(process.env.NODE_ENV === 'development' && { error: error.message })
         });
     }
 };

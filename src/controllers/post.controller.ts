@@ -280,13 +280,72 @@ export const getTotalPosts = async (
           select: {
             Likes: true,
             Comments: true,
-          },
-        },
+          }
+        }
       },
     });
 
     res.status(200).json({ totalPosts });
   } catch (error) {
+    next(error);
+  }
+};
+
+export const getPostLikes = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { postId } = req.params;
+
+    // First check if the post exists
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    // Get all likes for the post with user information
+    const likes = await prisma.likes.findMany({
+      where: { postId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            profilePictureUrl: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc', // Most recent likes first
+      },
+    });
+
+    // Extract user information from likes
+    const likedUsers = likes.map(like => ({
+      id: like.user.id,
+      username: like.user.username,
+      profilePictureUrl: like.user.profilePictureUrl,
+      firstName: like.user.firstName,
+      lastName: like.user.lastName,
+      fullName: `${like.user.firstName || ''} ${like.user.lastName || ''}`.trim(),
+      likedAt: like.createdAt,
+    }));
+
+    res.status(200).json({
+      success: true,
+      postId,
+      totalLikes: likes.length,
+      likedBy: likedUsers,
+    });
+  } catch (error) {
+    console.error("Error getting post likes:", error);
     next(error);
   }
 };

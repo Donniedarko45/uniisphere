@@ -24,4 +24,6 @@ router.post("/:postId/comments", auth_middleware_1.authenticate, post_controller
 router.post("/:postId/like", auth_middleware_1.authenticate, auth_middleware_1.verifyUser, post_controller_1.likePost);
 // Changed from DELETE /:postId to DELETE /:postId/unlike
 router.delete("/:postId/unlike", auth_middleware_1.authenticate, post_controller_1.unlikePost);
+// Get users who liked a post (like Instagram's feature)
+router.get("/:postId/likes", auth_middleware_1.authenticate, post_controller_1.getPostLikes);
 exports.default = router;

@@ -5,6 +5,7 @@ import {
   createPost,
   deletePost,
   getPost,
+  getPostLikes,
   getTotalPosts,
   getUserPosts,
   likePost,
@@ -73,6 +74,12 @@ router.post("/:postId/like",
 router.delete("/:postId/unlike",
   authenticate,
   unlikePost
+);
+
+// Get users who liked a post (like Instagram's feature)
+router.get("/:postId/likes",
+  authenticate,
+  getPostLikes as any
 );
 
 export default router;

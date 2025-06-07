@@ -28,6 +28,7 @@ const connection_routes_1 = __importDefault(require("./routes/connection.routes"
 const feed_routes_1 = __importDefault(require("./routes/feed.routes"));
 const humanLib_routes_1 = __importDefault(require("./routes/humanLib.routes"));
 const message_routes_1 = __importDefault(require("./routes/message.routes"));
+const notification_routes_1 = __importDefault(require("./routes/notification.routes"));
 const post_routes_1 = __importDefault(require("./routes/post.routes"));
 const sharePost_routes_1 = __importDefault(require("./routes/sharePost.routes"));
 const story_routes_1 = __importDefault(require("./routes/story.routes"));
@@ -52,6 +53,7 @@ app.use("/api/users", user_routes_1.default);
 app.use("/api/posts", post_routes_1.default);
 app.use("/api/connections", connection_routes_1.default);
 app.use("/api/messages", message_routes_1.default);
+app.use("/api/notifications", notification_routes_1.default);
 app.use("/api/feed", feed_routes_1.default);
 app.use("/api/blogs", blogs_routes_1.default);
 app.use("/api/human-lib", humanLib_routes_1.default);
