@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { ApiError } from '../utils/ApiError';
+import { io } from '../utils/socket';
 
 const prisma = new PrismaClient();
 
@@ -83,6 +84,85 @@ export const sharePost = async (req: AuthenticatedRequest, res: Response):Promis
             }
         });
 
+        // Extract @username mentions from the message and send to those users
+        let messagesSent = 0;
+        if (message && message.includes('@')) {
+            const mentionRegex = /@(\w+)/g;
+            const mentions = message.match(mentionRegex);
+            
+            if (mentions) {
+                const usernames = mentions.map((mention: string) => mention.substring(1)); // Remove @ symbol
+                
+                // Find mentioned users
+                const mentionedUsers = await prisma.user.findMany({
+                    where: {
+                        username: {
+                            in: usernames
+                        }
+                    },
+                    select: {
+                        id: true,
+                        username: true,
+                        profilePictureUrl: true
+                    }
+                });
+
+                // Send messages to mentioned users
+                for (const mentionedUser of mentionedUsers) {
+                    try {
+                        // Check if users are connected
+                        const connection = await prisma.connection.findFirst({
+                            where: {
+                                OR: [
+                                    { userId1: userId, userId2: mentionedUser.id, status: "accepted" },
+                                    { userId1: mentionedUser.id, userId2: userId, status: "accepted" },
+                                ],
+                            },
+                        });
+
+                        if (connection) {
+                            // Create shared post message content
+                            const shareMessageContent = `📤 Shared a post: "${post.content?.substring(0, 100)}${post.content && post.content.length > 100 ? '...' : ''}" \n\n${message}`;
+                            
+                            // Send message
+                            const sentMessage = await prisma.message.create({
+                                data: {
+                                    senderId: userId,
+                                    receiverId: mentionedUser.id,
+                                    content: shareMessageContent,
+                                },
+                                include: {
+                                    sender: {
+                                        select: {
+                                            id: true,
+                                            username: true,
+                                            profilePictureUrl: true,
+                                        },
+                                    },
+                                    receiver: {
+                                        select: {
+                                            id: true,
+                                            username: true,
+                                            profilePictureUrl: true,
+                                        },
+                                    },
+                                },
+                            });
+
+                            // Emit real-time message if socket is available
+                            if (io && io.to) {
+                                io.to(mentionedUser.id).emit("newMessage", sentMessage);
+                            }
+
+                            messagesSent++;
+                        }
+                    } catch (messageError) {
+                        console.error(`Error sending message to ${mentionedUser.username}:`, messageError);
+                    }
+                }
+            }
+        }
+
         // Get updated share count
         const shareCount = await prisma.share.count({
             where: { postId }
@@ -90,10 +170,13 @@ export const sharePost = async (req: AuthenticatedRequest, res: Response):Promis
 
         return res.status(201).json({
             success: true,
-            message: 'Post shared successfully',
+            message: messagesSent > 0 
+                ? `Post shared successfully and sent to ${messagesSent} user(s)`
+                : 'Post shared successfully',
             data: {
                 ...share,
-                shareCount
+                shareCount,
+                messagesSent
             }
         });
     } catch (error: any) {
