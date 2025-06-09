@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import prisma from "../config/prisma";
 import cloudinary from "../utils/cloudinary";
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 import { transferableAbortController } from "util";
 
 /*
@@ -51,6 +51,8 @@ export const getProfile = async (
         Skills: true,
         Interests: true,
         headline: true,
+        class10Board: true,
+        class12Board: true,
         profilePictureUrl: true,
         workorProject: true,
         college: true,
@@ -58,12 +60,13 @@ export const getProfile = async (
         email: true,
         connections1: true,
         connections2: true,
+        experiences: true, // Added experience data
         _count: {
           select: {
             connections1: true,
-            connections2: true
-          }
-        }
+            connections2: true,
+          },
+        },
       },
     });
 
@@ -72,54 +75,70 @@ export const getProfile = async (
     }
 
     // For each user, check if they are connected with the requesting user
-    const processedUsers = await Promise.all(users.map(async (user) => {
-      // Skip connection check if it's the same user
-      if (user.id === requestingUserId) {
+    const processedUsers = await Promise.all(
+      users.map(async (user) => {
+        // Skip connection check if it's the same user
+        if (user.id === requestingUserId) {
+          return {
+            ...user,
+            isConnected: true,
+            isOwnProfile: true,
+          };
+        }
+
+        const connection = await prisma.connection.findFirst({
+          where: {
+            OR: [
+              {
+                userId1: requestingUserId,
+                userId2: user.id,
+                status: "accepted",
+              },
+              {
+                userId1: user.id,
+                userId2: requestingUserId,
+                status: "accepted",
+              },
+            ],
+          },
+        });
+
+        const isConnected = !!connection;
+
+        // If not connected, return limited profile information
+        if (!isConnected) {
+          return {
+            id: user.id,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            headline: user.headline,
+            workorProject: user.workorProject,
+            email: user.email,
+            Skills: user.Skills,
+            Interests: user.Interests,
+            About: user.About,
+            experiences: user.experiences, // Added experience data for non-connected users
+            class10Board: user.class10Board,
+            class12Board: user.class12Board,
+            profilePictureUrl: user.profilePictureUrl,
+            college: user.college,
+            degree: user.degree,
+            location: user.location,
+            _count: user._count,
+            isConnected: false,
+            isOwnProfile: false,
+          };
+        }
+
+        // If connected, return full profile information
         return {
           ...user,
           isConnected: true,
-          isOwnProfile: true
+          isOwnProfile: false,
         };
-      }
-
-
-      const connection = await prisma.connection.findFirst({
-        where: {
-          OR: [
-            { userId1: requestingUserId, userId2: user.id, status: "accepted" },
-            { userId1: user.id, userId2: requestingUserId, status: "accepted" }
-          ]
-        }
-      });
-
-      const isConnected = !!connection;
-
-      // If not connected, return limited profile information
-      if (!isConnected) {
-        return {
-          id: user.id,
-          username: user.username,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          headline: user.headline,
-          About: user.About,
-          profilePictureUrl: user.profilePictureUrl,
-          college: user.college,
-          degree: user.degree,
-          location: user.location,
-          _count: user._count,
-          isConnected: false,
-          isOwnProfile: false
-        };
-      }
-
-      // If connected, return full profile information
-      return {
-        ...user,
-        isConnected: true,
-        isOwnProfile: false
-      };
-    }));
+      }),
+    );
 
     res.status(200).json(processedUsers);
   } catch (err) {
@@ -127,16 +146,13 @@ export const getProfile = async (
   }
 };
 
-
-
-
 export const updateProfile = async (
-  req: Request,
+  req: Request & { userId?: string },
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
-    const userId = req.body.userId;
+    const userId = req.userId; // Get userId from auth middleware instead of request body
 
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -168,7 +184,7 @@ export const updateProfile = async (
       where: { id: userId },
       include: {
         experiences: true,
-      }
+      },
     });
 
     if (!existingUser) {
@@ -179,7 +195,8 @@ export const updateProfile = async (
       const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
       if (!usernameRegex.test(username)) {
         return res.status(400).json({
-          error: "Username must be 3-30 characters long and can only contain letters, numbers, and underscores",
+          error:
+            "Username must be 3-30 characters long and can only contain letters, numbers, and underscores",
         });
       }
 
@@ -200,8 +217,8 @@ export const updateProfile = async (
           folder: "profile_pictures",
           transformation: [
             { width: 500, height: 500, crop: "fill" },
-            { quality: "auto" }
-          ]
+            { quality: "auto" },
+          ],
         });
         profilePictureUrl = result.secure_url;
 
@@ -209,13 +226,15 @@ export const updateProfile = async (
           data: {
             publicId: result.public_id,
             url: result.secure_url,
-            resourceType: 'image',
-            userId
-          }
+            resourceType: "image",
+            userId,
+          },
         });
       } catch (error) {
         console.error("Error uploading profile picture:", error);
-        return res.status(400).json({ error: "Failed to upload profile picture" });
+        return res
+          .status(400)
+          .json({ error: "Failed to upload profile picture" });
       }
     } else if (profilePictureBase64) {
       try {
@@ -223,8 +242,8 @@ export const updateProfile = async (
           folder: "profile_pictures",
           transformation: [
             { width: 500, height: 500, crop: "fill" },
-            { quality: "auto" }
-          ]
+            { quality: "auto" },
+          ],
         });
 
         profilePictureUrl = result.secure_url;
@@ -233,15 +252,20 @@ export const updateProfile = async (
           data: {
             publicId: result.public_id,
             url: result.secure_url,
-            resourceType: 'image',
-            userId
-          }
+            resourceType: "image",
+            userId,
+          },
         });
       } catch (error) {
         console.error("Error uploading base64 image:", error);
         console.error("Base64 string length:", profilePictureBase64?.length);
-        console.error("Base64 string preview:", profilePictureBase64?.substring(0, 50));
-        return res.status(400).json({ error: "Failed to upload profile picture" });
+        console.error(
+          "Base64 string preview:",
+          profilePictureBase64?.substring(0, 50),
+        );
+        return res
+          .status(400)
+          .json({ error: "Failed to upload profile picture" });
       }
     }
 
@@ -268,7 +292,7 @@ export const updateProfile = async (
     if (Interests !== undefined) updateData.Interests = Interests;
 
     // Check if profilePictureBase64 was provided at all (even if it's empty)
-    if ('profilePictureBase64' in req.body || req.file) {
+    if ("profilePictureBase64" in req.body || req.file) {
       updateData.profilePictureUrl = profilePictureUrl;
     }
 
@@ -282,45 +306,47 @@ export const updateProfile = async (
       await prisma.experience.deleteMany({
         where: {
           userId: userId,
-          id: { notIn: experienceIds }
-        }
+          id: { notIn: experienceIds },
+        },
       });
 
       // Update or create experiences
-      const experiencePromises = experiences.map(async (exp: {
-        id?: string;
-        title: string;
-        organizationName: string;
-        location: string;
-        locationType: string;
-        description: string;
-      }) => {
-        if (exp.id) {
-          // Update existing experience
-          return prisma.experience.update({
-            where: { id: exp.id },
-            data: {
-              title: exp.title,
-              organizationName: exp.organizationName,
-              location: exp.location,
-              locationType: exp.locationType,
-              description: exp.description,
-            }
-          });
-        } else {
-          // Create new experience
-          return prisma.experience.create({
-            data: {
-              title: exp.title,
-              organizationName: exp.organizationName,
-              location: exp.location,
-              locationType: exp.locationType,
-              description: exp.description,
-              userId: userId
-            }
-          });
-        }
-      });
+      const experiencePromises = experiences.map(
+        async (exp: {
+          id?: string;
+          title: string;
+          organizationName: string;
+          location: string;
+          locationType: string;
+          description: string;
+        }) => {
+          if (exp.id) {
+            // Update existing experience
+            return prisma.experience.update({
+              where: { id: exp.id },
+              data: {
+                title: exp.title,
+                organizationName: exp.organizationName,
+                location: exp.location,
+                locationType: exp.locationType,
+                description: exp.description,
+              },
+            });
+          } else {
+            // Create new experience
+            return prisma.experience.create({
+              data: {
+                title: exp.title,
+                organizationName: exp.organizationName,
+                location: exp.location,
+                locationType: exp.locationType,
+                description: exp.description,
+                userId: userId,
+              },
+            });
+          }
+        },
+      );
 
       await Promise.all(experiencePromises);
     }
@@ -329,26 +355,24 @@ export const updateProfile = async (
       where: { id: userId },
       data: updateData,
       include: {
-        experiences: true
-      }
+        experiences: true,
+      },
     });
 
     return res.status(200).json({
       message: "Profile updated successfully",
-      user: updatedUser
+      user: updatedUser,
     });
-
   } catch (error) {
     console.error("Error updating profile:", error);
     return next(error);
   }
 };
 
-
 export const getAllUsers = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const allUsers = await prisma.user.findMany();
@@ -358,7 +382,10 @@ export const getAllUsers = async (
   }
 };
 
-export const updateUserStatus = async (req: Request, res: Response): Promise<void> => {
+export const updateUserStatus = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   const { userId, status, isOnline } = req.body;
 
   try {
@@ -366,20 +393,19 @@ export const updateUserStatus = async (req: Request, res: Response): Promise<voi
       where: { id: userId },
       data: {
         status,
-        isOnline
-      }
+        isOnline,
+      },
     });
 
     res.status(200).json({
       success: true,
-      data: user
+      data: user,
     });
   } catch (error) {
-    console.error('Error updating user status:', error);
+    console.error("Error updating user status:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update user status'
+      message: "Failed to update user status",
     });
   }
 };
-

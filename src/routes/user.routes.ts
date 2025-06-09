@@ -23,8 +23,13 @@ router.get("/profile", getProfile);
 router.patch(
   "/profile",
   authenticate,
-  uploadLimiter,
-  upload.single("profilePicture"),
+  (req, res, next) => {
+    // Only apply upload middleware if content-type indicates multipart data
+    if (req.headers["content-type"]?.includes("multipart/form-data")) {
+      return upload.single("profilePicture")(req, res, next);
+    }
+    next();
+  },
   updateProfile,
 );
 

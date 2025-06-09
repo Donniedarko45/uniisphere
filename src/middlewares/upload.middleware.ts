@@ -82,3 +82,33 @@ export const storyUpload = multer({
     }
   },
 });
+
+// Enhanced upload middleware for blogs (supports images and short videos)
+export const blogMediaUpload = multer({
+  storage,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit for blog media
+  },
+  fileFilter: (
+    req: Request,
+    file: Express.Multer.File,
+    cb: FileFilterCallback,
+  ) => {
+    // Allow images and videos for blogs
+    const allowedImageTypes = /jpeg|jpg|png|gif|webp/;
+    const allowedVideoTypes = /mp4|webm/; // Limiting to web-friendly video formats
+    
+    const isImage = allowedImageTypes.test(file.mimetype);
+    const isVideo = allowedVideoTypes.test(file.mimetype);
+    
+    const imageMimetypeCheck = file.mimetype.startsWith('image/');
+    const videoMimetypeCheck = file.mimetype.startsWith('video/');
+
+    // Additional check for video duration could be done at the controller level
+    if ((isImage && imageMimetypeCheck) || (isVideo && videoMimetypeCheck)) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Error: Only images (JPEG, JPG, PNG, GIF, WEBP) and videos (MP4, WEBM) are supported for blogs!"));
+    }
+  },
+});

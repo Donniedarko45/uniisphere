@@ -13,19 +13,21 @@ npm install redis
 ### Local Development
 
 1. **Install Redis Server**:
+
    ```bash
    # Ubuntu/Debian
    sudo apt update
    sudo apt install redis-server
-   
+
    # macOS
    brew install redis
-   
+
    # Windows (using WSL)
    sudo apt install redis-server
    ```
 
 2. **Start Redis Server**:
+
    ```bash
    redis-server
    ```
@@ -39,6 +41,7 @@ npm install redis
 ### Production Setup
 
 For production, consider using:
+
 - **Redis Cloud** (managed service)
 - **AWS ElastiCache**
 - **Google Cloud Memorystore**
@@ -58,6 +61,7 @@ REDIS_URL=redis://localhost:6379
 ## Features Implemented
 
 ### 1. **Redis Manager** (`src/config/redis.ts`)
+
 - Connection management with retry logic
 - Automatic reconnection
 - Error handling and fallback
@@ -65,6 +69,7 @@ REDIS_URL=redis://localhost:6379
 - TTL (Time To Live) support
 
 ### 2. **Cache Service** (`src/services/cacheService.ts`)
+
 - User profile caching
 - Post caching
 - Connection data caching
@@ -75,6 +80,7 @@ REDIS_URL=redis://localhost:6379
 - Generic caching methods
 
 ### 3. **Rate Limiting with Memory Store**
+
 - Uses in-memory storage (default express-rate-limit)
 - Automatic cleanup and management
 - Multiple rate limiters for different operations
@@ -82,8 +88,9 @@ REDIS_URL=redis://localhost:6379
 ## Caching Strategies
 
 ### User Profile Caching
+
 ```typescript
-import cacheService from '../services/cacheService';
+import cacheService from "../services/cacheService";
 
 // Cache user profile
 await cacheService.cacheUserProfile(userId, profile, 3600); // 1 hour
@@ -96,6 +103,7 @@ await cacheService.invalidateUserProfile(userId);
 ```
 
 ### Post Caching
+
 ```typescript
 // Cache individual post
 await cacheService.cachePost(postId, post, 3600);
@@ -108,6 +116,7 @@ await cacheService.invalidateUserPosts(userId);
 ```
 
 ### Feed Caching
+
 ```typescript
 // Cache user's feed
 await cacheService.cacheFeed(userId, feedPosts, 600); // 10 minutes
@@ -117,6 +126,7 @@ const cachedFeed = await cacheService.getFeed(userId);
 ```
 
 ### Search Results Caching
+
 ```typescript
 // Cache search results
 await cacheService.cacheSearchResults(query, results, 1800);
@@ -127,61 +137,63 @@ const cachedResults = await cacheService.getSearchResults(query);
 
 ## Cache TTL (Time To Live) Strategy
 
-| Data Type | TTL | Reason |
-|-----------|-----|--------|
-| User Profiles | 1 hour | Updates infrequently |
-| Posts | 1 hour | Content rarely changes |
-| User Posts List | 30 minutes | New posts added regularly |
-| Connections | 30 minutes | Connections change moderately |
-| Stories | 15 minutes | Time-sensitive content |
-| Feed | 10 minutes | Needs to be fresh |
-| Search Results | 30 minutes | Balance between performance and freshness |
-| Sessions | 24 hours | Long-lived user sessions |
+| Data Type       | TTL        | Reason                                    |
+| --------------- | ---------- | ----------------------------------------- |
+| User Profiles   | 1 hour     | Updates infrequently                      |
+| Posts           | 1 hour     | Content rarely changes                    |
+| User Posts List | 30 minutes | New posts added regularly                 |
+| Connections     | 30 minutes | Connections change moderately             |
+| Stories         | 15 minutes | Time-sensitive content                    |
+| Feed            | 10 minutes | Needs to be fresh                         |
+| Search Results  | 30 minutes | Balance between performance and freshness |
+| Sessions        | 24 hours   | Long-lived user sessions                  |
 
 ## Usage Examples
 
 ### In Controllers
 
 ```typescript
-import cacheService from '../services/cacheService';
+import cacheService from "../services/cacheService";
 
 export const getProfile = async (req: Request, res: Response) => {
   const { userId } = req.params;
-  
+
   // Try cache first
   let profile = await cacheService.getUserProfile(userId);
-  
+
   if (!profile) {
     // Cache miss - fetch from database
     profile = await prisma.user.findUnique({
       where: { id: userId },
-      include: { /* ... */ }
+      include: {
+        /* ... */
+      },
     });
-    
+
     if (profile) {
       // Cache for future requests
       await cacheService.cacheUserProfile(userId, profile);
     }
   }
-  
+
   res.json(profile);
 };
 
 export const updateProfile = async (req: Request, res: Response) => {
   const { userId } = req.params;
-  
+
   // Update database
   const updatedProfile = await prisma.user.update({
     where: { id: userId },
-    data: req.body
+    data: req.body,
   });
-  
+
   // Invalidate related caches
   await cacheService.invalidateUserData(userId);
-  
+
   // Cache the updated profile
   await cacheService.cacheUserProfile(userId, updatedProfile);
-  
+
   res.json(updatedProfile);
 };
 ```
@@ -206,7 +218,7 @@ await cacheService.invalidateUserConnections(otherUserId);
 ```typescript
 // Get cache statistics
 const stats = await cacheService.getCacheStats();
-console.log('Cache Status:', stats);
+console.log("Cache Status:", stats);
 // Output: { connected: true, keyCount: 150 }
 ```
 
@@ -229,21 +241,25 @@ The Redis implementation includes comprehensive error handling:
 ## Best Practices
 
 ### 1. Cache Keys
+
 - Use consistent naming patterns: `user_profile:${userId}`
 - Include versions for breaking changes: `user_profile:v2:${userId}`
 - Use namespaces to avoid collisions
 
 ### 2. TTL Management
+
 - Set appropriate TTLs based on data volatility
 - Use shorter TTLs for frequently changing data
 - Use longer TTLs for static/reference data
 
 ### 3. Cache Invalidation
+
 - Invalidate caches when underlying data changes
 - Use pattern-based invalidation for related data
 - Consider cascading invalidation for dependent data
 
 ### 4. Monitoring
+
 - Monitor cache hit/miss ratios
 - Track Redis memory usage
 - Set up alerts for Redis disconnections
@@ -259,10 +275,12 @@ The Redis implementation includes comprehensive error handling:
 ## Installation Complete
 
 Your application now has:
+
 - ✅ Redis caching system
 - ✅ Comprehensive cache service
 - ✅ Error handling and fallbacks
 - ✅ Rate limiting (memory-based)
 - ✅ Automatic cleanup on shutdown
 
-The caching system will significantly improve your application's performance and scalability. 
+The caching system will significantly improve your application's performance and scalability.
+

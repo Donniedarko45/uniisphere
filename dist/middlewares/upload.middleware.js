@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.storyUpload = exports.upload = void 0;
+exports.blogMediaUpload = exports.storyUpload = exports.upload = void 0;
 const fs_1 = __importDefault(require("fs"));
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
@@ -62,6 +62,29 @@ exports.storyUpload = (0, multer_1.default)({
         }
         else {
             cb(new Error("Error: Only images (JPEG, JPG, PNG, GIF) and videos (MP4, AVI, MOV, WMV, FLV, WEBM) are supported for stories!"));
+        }
+    },
+});
+// Enhanced upload middleware for blogs (supports images and short videos)
+exports.blogMediaUpload = (0, multer_1.default)({
+    storage,
+    limits: {
+        fileSize: 100 * 1024 * 1024, // 100MB limit for blog media
+    },
+    fileFilter: (req, file, cb) => {
+        // Allow images and videos for blogs
+        const allowedImageTypes = /jpeg|jpg|png|gif|webp/;
+        const allowedVideoTypes = /mp4|webm/; // Limiting to web-friendly video formats
+        const isImage = allowedImageTypes.test(file.mimetype);
+        const isVideo = allowedVideoTypes.test(file.mimetype);
+        const imageMimetypeCheck = file.mimetype.startsWith('image/');
+        const videoMimetypeCheck = file.mimetype.startsWith('video/');
+        // Additional check for video duration could be done at the controller level
+        if ((isImage && imageMimetypeCheck) || (isVideo && videoMimetypeCheck)) {
+            return cb(null, true);
+        }
+        else {
+            cb(new Error("Error: Only images (JPEG, JPG, PNG, GIF, WEBP) and videos (MP4, WEBM) are supported for blogs!"));
         }
     },
 });

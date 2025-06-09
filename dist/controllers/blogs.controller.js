@@ -12,14 +12,46 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteBlog = exports.updateBlog = exports.createBlog = exports.getBlogById = exports.getAllBlogs = void 0;
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
+const cloudinaryService_1 = require("../services/cloudinaryService");
 const prisma = new client_1.PrismaClient();
+// Helper function to validate video URLs
+const isValidVideoUrl = (url) => {
+    const videoUrlPatterns = [
+        /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/.+/i, // YouTube
+        /^https?:\/\/(www\.)?vimeo\.com\/.+/i, // Vimeo
+        /^https?:\/\/(www\.)?dailymotion\.com\/.+/i, // Dailymotion
+        /\.mp4(\?.*)?$/i, // Direct MP4 links
+        /\.webm(\?.*)?$/i, // WebM videos
+    ];
+    return videoUrlPatterns.some(pattern => pattern.test(url));
+};
+// Helper function to handle file uploads
+const handleFileUploads = (files) => __awaiter(void 0, void 0, void 0, function* () {
+    const uploadResults = yield Promise.all(files.map((file) => __awaiter(void 0, void 0, void 0, function* () {
+        const result = yield (0, cloudinaryService_1.uploadBlogMedia)(file);
+        return {
+            url: result.url,
+            type: result.resourceType,
+            publicId: result.publicId
+        };
+    })));
+    return uploadResults.reduce((acc, result) => {
+        if (result.type === 'video') {
+            acc.videos.push(result.url);
+        }
+        else {
+            acc.images.push(result.url);
+        }
+        return acc;
+    }, { images: [], videos: [] });
+});
 // Validation schema for blog creation and updates
 const blogSchema = zod_1.z.object({
     title: zod_1.z.string().min(1, "Title is required"),
     description: zod_1.z.string().optional(),
     content: zod_1.z.string().min(1, "Content is required"),
     titlePhoto: zod_1.z.string().optional(),
-    contentVideo: zod_1.z.array(zod_1.z.string()).optional(),
+    contentVideo: zod_1.z.array(zod_1.z.string().refine(url => isValidVideoUrl(url), { message: "Invalid video URL format. Supported platforms: YouTube, Vimeo, Dailymotion, or direct MP4/WebM links" })).optional(),
     mediaUrl: zod_1.z.array(zod_1.z.string()).optional(),
     authorId: zod_1.z.string().min(1, "Author ID is required"),
     tags: zod_1.z.array(zod_1.z.string()).optional(),

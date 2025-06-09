@@ -1,8 +1,44 @@
 import { NextFunction, Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { uploadBlogMedia } from "../services/cloudinaryService";
 
 const prisma = new PrismaClient();
+
+// Helper function to validate video URLs
+const isValidVideoUrl = (url: string): boolean => {
+  const videoUrlPatterns = [
+    /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/.+/i,  // YouTube
+    /^https?:\/\/(www\.)?vimeo\.com\/.+/i,               // Vimeo
+    /^https?:\/\/(www\.)?dailymotion\.com\/.+/i,         // Dailymotion
+    /\.mp4(\?.*)?$/i,                                    // Direct MP4 links
+    /\.webm(\?.*)?$/i,                                   // WebM videos
+  ];
+  return videoUrlPatterns.some(pattern => pattern.test(url));
+};
+
+// Helper function to handle file uploads
+const handleFileUploads = async (files: Express.Multer.File[]) => {
+  const uploadResults = await Promise.all(
+    files.map(async (file) => {
+      const result = await uploadBlogMedia(file);
+      return {
+        url: result.url,
+        type: result.resourceType,
+        publicId: result.publicId
+      };
+    })
+  );
+
+  return uploadResults.reduce((acc, result) => {
+    if (result.type === 'video') {
+      acc.videos.push(result.url);
+    } else {
+      acc.images.push(result.url);
+    }
+    return acc;
+  }, { images: [] as string[], videos: [] as string[] });
+};
 
 // Validation schema for blog creation and updates
 const blogSchema = z.object({
@@ -10,7 +46,10 @@ const blogSchema = z.object({
   description: z.string().optional(),
   content: z.string().min(1, "Content is required"),
   titlePhoto: z.string().optional(),
-  contentVideo: z.array(z.string()).optional(),
+  contentVideo: z.array(z.string().refine(
+    url => isValidVideoUrl(url),
+    { message: "Invalid video URL format. Supported platforms: YouTube, Vimeo, Dailymotion, or direct MP4/WebM links" }
+  )).optional(),
   mediaUrl: z.array(z.string()).optional(),
   authorId: z.string().min(1, "Author ID is required"),
   tags: z.array(z.string()).optional(),

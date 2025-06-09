@@ -55,6 +55,8 @@ const getProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
                 Skills: true,
                 Interests: true,
                 headline: true,
+                class10Board: true,
+                class12Board: true,
                 profilePictureUrl: true,
                 workorProject: true,
                 college: true,
@@ -62,12 +64,13 @@ const getProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
                 email: true,
                 connections1: true,
                 connections2: true,
+                experiences: true, // Added experience data
                 _count: {
                     select: {
                         connections1: true,
-                        connections2: true
-                    }
-                }
+                        connections2: true,
+                    },
+                },
             },
         });
         if (!users || users.length === 0) {
@@ -82,10 +85,18 @@ const getProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             const connection = yield prisma_1.default.connection.findFirst({
                 where: {
                     OR: [
-                        { userId1: requestingUserId, userId2: user.id, status: "accepted" },
-                        { userId1: user.id, userId2: requestingUserId, status: "accepted" }
-                    ]
-                }
+                        {
+                            userId1: requestingUserId,
+                            userId2: user.id,
+                            status: "accepted",
+                        },
+                        {
+                            userId1: user.id,
+                            userId2: requestingUserId,
+                            status: "accepted",
+                        },
+                    ],
+                },
             });
             const isConnected = !!connection;
             // If not connected, return limited profile information
@@ -96,14 +107,21 @@ const getProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
                     firstName: user.firstName,
                     lastName: user.lastName,
                     headline: user.headline,
+                    workorProject: user.workorProject,
+                    email: user.email,
+                    Skills: user.Skills,
+                    Interests: user.Interests,
                     About: user.About,
+                    experiences: user.experiences, // Added experience data for non-connected users
+                    class10Board: user.class10Board,
+                    class12Board: user.class12Board,
                     profilePictureUrl: user.profilePictureUrl,
                     college: user.college,
                     degree: user.degree,
                     location: user.location,
                     _count: user._count,
                     isConnected: false,
-                    isOwnProfile: false
+                    isOwnProfile: false,
                 };
             }
             // If connected, return full profile information
@@ -118,7 +136,7 @@ const getProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
 exports.getProfile = getProfile;
 const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const userId = req.body.userId;
+        const userId = req.userId; // Get userId from auth middleware instead of request body
         if (!userId) {
             return res.status(401).json({ error: "Unauthorized" });
         }
@@ -127,7 +145,7 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
             where: { id: userId },
             include: {
                 experiences: true,
-            }
+            },
         });
         if (!existingUser) {
             return res.status(404).json({ error: "User not found" });
@@ -153,22 +171,24 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
                     folder: "profile_pictures",
                     transformation: [
                         { width: 500, height: 500, crop: "fill" },
-                        { quality: "auto" }
-                    ]
+                        { quality: "auto" },
+                    ],
                 });
                 profilePictureUrl = result.secure_url;
                 yield prisma_1.default.cloudinaryMedia.create({
                     data: {
                         publicId: result.public_id,
                         url: result.secure_url,
-                        resourceType: 'image',
-                        userId
-                    }
+                        resourceType: "image",
+                        userId,
+                    },
                 });
             }
             catch (error) {
                 console.error("Error uploading profile picture:", error);
-                return res.status(400).json({ error: "Failed to upload profile picture" });
+                return res
+                    .status(400)
+                    .json({ error: "Failed to upload profile picture" });
             }
         }
         else if (profilePictureBase64) {
@@ -177,24 +197,26 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
                     folder: "profile_pictures",
                     transformation: [
                         { width: 500, height: 500, crop: "fill" },
-                        { quality: "auto" }
-                    ]
+                        { quality: "auto" },
+                    ],
                 });
                 profilePictureUrl = result.secure_url;
                 yield prisma_1.default.cloudinaryMedia.create({
                     data: {
                         publicId: result.public_id,
                         url: result.secure_url,
-                        resourceType: 'image',
-                        userId
-                    }
+                        resourceType: "image",
+                        userId,
+                    },
                 });
             }
             catch (error) {
                 console.error("Error uploading base64 image:", error);
                 console.error("Base64 string length:", profilePictureBase64 === null || profilePictureBase64 === void 0 ? void 0 : profilePictureBase64.length);
                 console.error("Base64 string preview:", profilePictureBase64 === null || profilePictureBase64 === void 0 ? void 0 : profilePictureBase64.substring(0, 50));
-                return res.status(400).json({ error: "Failed to upload profile picture" });
+                return res
+                    .status(400)
+                    .json({ error: "Failed to upload profile picture" });
             }
         }
         const updateData = {};
@@ -234,7 +256,7 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         if (Interests !== undefined)
             updateData.Interests = Interests;
         // Check if profilePictureBase64 was provided at all (even if it's empty)
-        if ('profilePictureBase64' in req.body || req.file) {
+        if ("profilePictureBase64" in req.body || req.file) {
             updateData.profilePictureUrl = profilePictureUrl;
         }
         // Handle experiences update if provided
@@ -246,8 +268,8 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
             yield prisma_1.default.experience.deleteMany({
                 where: {
                     userId: userId,
-                    id: { notIn: experienceIds }
-                }
+                    id: { notIn: experienceIds },
+                },
             });
             // Update or create experiences
             const experiencePromises = experiences.map((exp) => __awaiter(void 0, void 0, void 0, function* () {
@@ -261,7 +283,7 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
                             location: exp.location,
                             locationType: exp.locationType,
                             description: exp.description,
-                        }
+                        },
                     });
                 }
                 else {
@@ -273,8 +295,8 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
                             location: exp.location,
                             locationType: exp.locationType,
                             description: exp.description,
-                            userId: userId
-                        }
+                            userId: userId,
+                        },
                     });
                 }
             }));
@@ -284,12 +306,12 @@ const updateProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, func
             where: { id: userId },
             data: updateData,
             include: {
-                experiences: true
-            }
+                experiences: true,
+            },
         });
         return res.status(200).json({
             message: "Profile updated successfully",
-            user: updatedUser
+            user: updatedUser,
         });
     }
     catch (error) {
@@ -315,19 +337,19 @@ const updateUserStatus = (req, res) => __awaiter(void 0, void 0, void 0, functio
             where: { id: userId },
             data: {
                 status,
-                isOnline
-            }
+                isOnline,
+            },
         });
         res.status(200).json({
             success: true,
-            data: user
+            data: user,
         });
     }
     catch (error) {
-        console.error('Error updating user status:', error);
+        console.error("Error updating user status:", error);
         res.status(500).json({
             success: false,
-            message: 'Failed to update user status'
+            message: "Failed to update user status",
         });
     }
 });

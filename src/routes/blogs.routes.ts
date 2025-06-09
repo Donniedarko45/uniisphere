@@ -6,6 +6,7 @@ import {
   updateBlog,
   deleteBlog
 } from '../controllers/blogs.controller';
+import { blogMediaUpload } from '../middlewares/upload.middleware';
 
 const router = Router();
 
@@ -13,9 +14,11 @@ router.get('/allBlogs', getAllBlogs);
 
 router.get('/blog/:id', getBlogById);
 
-router.post('/blog/create', createBlog);
+// Support multiple file uploads for both images and videos
+router.post('/blog/create', blogMediaUpload.array('media', 10), createBlog);
 
-router.put('/blogs/:id', updateBlog);
+// Support multiple file uploads for both images and videos
+router.put('/blogs/:id', blogMediaUpload.array('media', 10), updateBlog);
 
 router.delete('/blogs/:id', deleteBlog);
 
