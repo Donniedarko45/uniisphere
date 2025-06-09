@@ -130,7 +130,6 @@ export const getProfile = async (
             isOwnProfile: false,
           };
         }
-
         // If connected, return full profile information
         return {
           ...user,
