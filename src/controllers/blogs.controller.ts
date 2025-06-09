@@ -114,11 +114,48 @@ export const createBlog = async (
   next: NextFunction
 ): Promise<any> => {
   try {
-    const validatedData = blogSchema.parse(req.body);
+    console.log("Request body:", req.body);
+    console.log("Request file:", req.file);
+
+    // Parse tags if they come as a string
+    let parsedBody = { ...req.body };
+    if (typeof req.body.tags === 'string') {
+      try {
+        parsedBody.tags = JSON.parse(req.body.tags);
+      } catch (e) {
+        // If parsing fails, split by comma
+        parsedBody.tags = req.body.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean);
+      }
+    }
+
+    // Convert published string to boolean
+    if (typeof req.body.published === 'string') {
+      parsedBody.published = req.body.published === 'true';
+    }
+
+    const validatedData = blogSchema.parse(parsedBody);
     
+    // Handle file upload if present
+    let titlePhotoUrl = null;
+    if (req.file) {
+      try {
+        const uploadResult = await uploadBlogMedia(req.file);
+        titlePhotoUrl = uploadResult.url;
+        console.log("File uploaded successfully:", uploadResult.url);
+      } catch (uploadError: any) {
+        console.error("File upload error:", uploadError);
+        return res.status(400).json({
+          success: false,
+          message: "Failed to upload media file",
+          error: uploadError?.message || "Unknown upload error"
+        });
+      }
+    }
+
     const blog = await prisma.blogs.create({
       data: {
         ...validatedData,
+        titlePhoto: titlePhotoUrl,
         published: validatedData.published ?? false
       },
       include: {
@@ -126,11 +163,14 @@ export const createBlog = async (
       }
     });
 
+    console.log("Blog created successfully:", blog.id);
+
     return res.status(201).json({
       success: true,
       data: blog
     });
   } catch (error) {
+    console.error("Blog creation error:", error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({
         success: false,

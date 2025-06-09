@@ -87,16 +87,23 @@ export const storyUpload = multer({
 export const blogMediaUpload = multer({
   storage,
   limits: {
-    fileSize: 100 * 1024 * 1024, // 100MB limit for blog media
+    fileSize: 30 * 1024 * 1024, // 30MB limit for blog media (matching frontend limit)
   },
   fileFilter: (
     req: Request,
     file: Express.Multer.File,
     cb: FileFilterCallback,
   ) => {
+    console.log('Blog media upload - File info:', {
+      fieldname: file.fieldname,
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size
+    });
+
     // Allow images and videos for blogs
     const allowedImageTypes = /jpeg|jpg|png|gif|webp/;
-    const allowedVideoTypes = /mp4|webm/; // Limiting to web-friendly video formats
+    const allowedVideoTypes = /mp4|webm|avi|mov/; // Added avi and mov to match frontend
     
     const isImage = allowedImageTypes.test(file.mimetype);
     const isVideo = allowedVideoTypes.test(file.mimetype);
@@ -108,7 +115,7 @@ export const blogMediaUpload = multer({
     if ((isImage && imageMimetypeCheck) || (isVideo && videoMimetypeCheck)) {
       return cb(null, true);
     } else {
-      cb(new Error("Error: Only images (JPEG, JPG, PNG, GIF, WEBP) and videos (MP4, WEBM) are supported for blogs!"));
+      cb(new Error("Error: Only images (JPEG, JPG, PNG, GIF, WEBP) and videos (MP4, WEBM, AVI, MOV) are supported for blogs!"));
     }
   },
 });
