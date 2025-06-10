@@ -8,66 +8,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteBlog = exports.updateBlog = exports.createBlog = exports.getBlogById = exports.getAllBlogs = void 0;
-const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
-const cloudinaryService_1 = require("../services/cloudinaryService");
-const prisma = new client_1.PrismaClient();
-// Helper function to validate video URLs
-const isValidVideoUrl = (url) => {
-    const videoUrlPatterns = [
-        /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/.+/i, // YouTube
-        /^https?:\/\/(www\.)?vimeo\.com\/.+/i, // Vimeo
-        /^https?:\/\/(www\.)?dailymotion\.com\/.+/i, // Dailymotion
-        /\.mp4(\?.*)?$/i, // Direct MP4 links
-        /\.webm(\?.*)?$/i, // WebM videos
-    ];
-    return videoUrlPatterns.some(pattern => pattern.test(url));
-};
-// Helper function to handle file uploads
-const handleFileUploads = (files) => __awaiter(void 0, void 0, void 0, function* () {
-    const uploadResults = yield Promise.all(files.map((file) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield (0, cloudinaryService_1.uploadBlogMedia)(file);
-        return {
-            url: result.url,
-            type: result.resourceType,
-            publicId: result.publicId
-        };
-    })));
-    return uploadResults.reduce((acc, result) => {
-        if (result.type === 'video') {
-            acc.videos.push(result.url);
-        }
-        else {
-            acc.images.push(result.url);
-        }
-        return acc;
-    }, { images: [], videos: [] });
-});
-// Validation schema for blog creation and updates
-const blogSchema = zod_1.z.object({
-    title: zod_1.z.string().min(1, "Title is required"),
-    description: zod_1.z.string().optional(),
-    content: zod_1.z.string().min(1, "Content is required"),
-    titlePhoto: zod_1.z.string().optional(),
-    contentVideo: zod_1.z.array(zod_1.z.string().refine(url => isValidVideoUrl(url), { message: "Invalid video URL format. Supported platforms: YouTube, Vimeo, Dailymotion, or direct MP4/WebM links" })).optional(),
-    mediaUrl: zod_1.z.array(zod_1.z.string()).optional(),
-    authorId: zod_1.z.string().min(1, "Author ID is required"),
-    tags: zod_1.z.array(zod_1.z.string()).optional(),
-    published: zod_1.z.boolean().optional()
-});
+const cloudinary_1 = __importDefault(require("../utils/cloudinary"));
+const prisma_1 = __importDefault(require("../config/prisma"));
+//Maximum video duration in seconds (5 minutes)
+const MAX_VIDEO_DURATION = 300;
+// Maximum video size in bytes (100MB)
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 // Get all blogs
 const getAllBlogs = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const blogs = yield prisma.blogs.findMany({
+        const blogs = yield prisma_1.default.blogs.findMany({
             orderBy: {
-                createdAt: 'desc'
-            }
+                createdAt: "desc",
+            },
         });
         return res.status(200).json({
             success: true,
-            data: blogs
+            data: blogs,
         });
     }
     catch (error) {
@@ -79,18 +42,18 @@ exports.getAllBlogs = getAllBlogs;
 const getBlogById = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        const blog = yield prisma.blogs.findUnique({
-            where: { id }
+        const blog = yield prisma_1.default.blogs.findUnique({
+            where: { id },
         });
         if (!blog) {
             return res.status(404).json({
                 success: false,
-                message: "Blog not found"
+                message: "Blog not found",
             });
         }
         return res.status(200).json({
             success: true,
-            data: blog
+            data: blog,
         });
     }
     catch (error) {
@@ -98,30 +61,59 @@ const getBlogById = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.getBlogById = getBlogById;
-// Create new blog
+// Create new blog with enhanced video handling
 const createBlog = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    const { content, authorId, description, title } = req.body;
     try {
-        const validatedData = blogSchema.parse(req.body);
-        const blog = yield prisma.blogs.create({
-            data: Object.assign(Object.assign({}, validatedData), { published: (_a = validatedData.published) !== null && _a !== void 0 ? _a : false }),
-            include: {
-                author: true
+        const mediaUrls = [];
+        if (!req.files || !Array.isArray(req.files)) {
+            console.log("No files uploaded or invalid file format");
+        }
+        else {
+            for (const file of req.files) {
+                try {
+                    if (!file.path) {
+                        console.log(`No path found for file: ${file.originalname}`);
+                        continue;
+                    }
+                    console.log("filePath:" + file.path);
+                    const result = yield cloudinary_1.default.uploader.upload(file.path, {
+                        folder: "posts",
+                        resource_type: "auto",
+                    });
+                    console.log("result is ", result);
+                    if (result && result.secure_url) {
+                        mediaUrls.push(result.secure_url);
+                    }
+                    else {
+                        console.log(`Failed to upload file: ${file.originalname}`);
+                    }
+                }
+                catch (uploadError) {
+                    console.error(`Error uploading file ${file.originalname}:`, uploadError);
+                }
             }
+        }
+        const blog = yield prisma_1.default.blogs.create({
+            data: {
+                content,
+                mediaUrl: mediaUrls,
+                authorId,
+                description,
+                title,
+            },
         });
-        return res.status(201).json({
+        res.status(201).json({
             success: true,
-            data: blog
+            blog,
+            mediaUrls,
+            message: mediaUrls.length
+                ? "blog created with media"
+                : "blog created without media",
         });
     }
     catch (error) {
-        if (error instanceof zod_1.z.ZodError) {
-            return res.status(400).json({
-                success: false,
-                message: "Validation error",
-                errors: error.errors
-            });
-        }
+        console.error("Error in createBlog:", error);
         next(error);
     }
 });
@@ -130,23 +122,23 @@ exports.createBlog = createBlog;
 const updateBlog = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        const validatedData = blogSchema.partial().parse(req.body);
-        const existingBlog = yield prisma.blogs.findUnique({
-            where: { id }
+        const existingBlog = yield prisma_1.default.blogs.findUnique({
+            where: { id },
         });
         if (!existingBlog) {
             return res.status(404).json({
                 success: false,
-                message: "Blog not found"
+                message: "Blog not found",
             });
         }
-        const updatedBlog = yield prisma.blogs.update({
+        const updatedBlog = yield prisma_1.default.blogs.update({
             where: { id },
-            data: validatedData
+            //@ts-ignore
+            data: validatedData,
         });
         return res.status(200).json({
             success: true,
-            data: updatedBlog
+            data: updatedBlog,
         });
     }
     catch (error) {
@@ -154,7 +146,7 @@ const updateBlog = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             return res.status(400).json({
                 success: false,
                 message: "Validation error",
-                errors: error.errors
+                errors: error.errors,
             });
         }
         next(error);
@@ -165,21 +157,21 @@ exports.updateBlog = updateBlog;
 const deleteBlog = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        const existingBlog = yield prisma.blogs.findUnique({
-            where: { id }
+        const existingBlog = yield prisma_1.default.blogs.findUnique({
+            where: { id },
         });
         if (!existingBlog) {
             return res.status(404).json({
                 success: false,
-                message: "Blog not found"
+                message: "Blog not found",
             });
         }
-        yield prisma.blogs.delete({
-            where: { id }
+        yield prisma_1.default.blogs.delete({
+            where: { id },
         });
         return res.status(200).json({
             success: true,
-            message: "Blog deleted successfully"
+            message: "Blog deleted successfully",
         });
     }
     catch (error) {

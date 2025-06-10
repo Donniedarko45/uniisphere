@@ -161,14 +161,73 @@ const getPost = (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
 });
 exports.getPost = getPost;
 const getUserPosts = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId } = req.params;
+    const { userId } = req.query;
     try {
+        console.log(`[getUserPosts] Searching for posts with userId: ${userId}`);
+        if (!userId || typeof userId !== 'string') {
+            console.log('[getUserPosts] Invalid userId provided:', userId);
+            res.status(400).json({ message: "UserId is required as a query parameter" });
+            return;
+        }
+        // First check if the user exists
+        const user = yield prisma_1.default.user.findUnique({
+            where: { id: userId }
+        });
+        if (!user) {
+            console.log(`[getUserPosts] User not found with id: ${userId}`);
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        console.log(`[getUserPosts] Found user:`, {
+            userId: user.id,
+            username: user.username
+        });
         const posts = yield prisma_1.default.post.findMany({
             where: { userId },
+            include: {
+                user: {
+                    select: {
+                        username: true,
+                        profilePictureUrl: true,
+                    }
+                },
+                _count: {
+                    select: {
+                        Likes: true,
+                        Comments: true,
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
         });
+        console.log(`[getUserPosts] Query results:`, {
+            postsFound: posts.length,
+            posts: posts.map(post => {
+                var _a;
+                return ({
+                    id: post.id,
+                    content: (_a = post.content) === null || _a === void 0 ? void 0 : _a.substring(0, 50), // First 50 chars of content for logging
+                    createdAt: post.createdAt
+                });
+            })
+        });
+        if (posts.length === 0) {
+            res.status(200).json({
+                message: "No posts found for this user",
+                posts: []
+            });
+            return;
+        }
         res.status(200).json({ posts });
     }
     catch (error) {
+        console.error('[getUserPosts] Error fetching posts:', {
+            userId,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+        });
         next(error);
     }
 });

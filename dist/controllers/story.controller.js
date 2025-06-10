@@ -35,7 +35,7 @@ const createStory = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         console.log("File details:", {
             path: req.file.path,
             mimetype: req.file.mimetype,
-            size: req.file.size
+            size: req.file.size,
         });
         let mediaUrl;
         try {
@@ -150,13 +150,13 @@ exports.viewStory = viewStory;
 const deleteStory = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const storyId = req.params.id;
     const userId = req.userId;
-    console.log('Delete Story - Params:', { storyId, userId });
+    console.log("Delete Story - Params:", { storyId, userId });
     try {
-        console.log('Attempting to find story:', storyId);
+        console.log("Attempting to find story:", storyId);
         const story = yield prisma_1.default.story.findUnique({
             where: { id: storyId },
         });
-        console.log('Found story:', story);
+        console.log("Found story:", story);
         if (!story) {
             return res.status(404).json({ error: "Story not found" });
         }
@@ -168,28 +168,28 @@ const deleteStory = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         // Try to delete from Cloudinary but don't let it block the story deletion
         if (story.mediaUrl) {
             try {
-                console.log('Attempting to delete from cloudinary:', story.mediaUrl);
+                console.log("Attempting to delete from cloudinary:", story.mediaUrl);
                 yield cloudinary_1.default.uploader.destroy(story.mediaUrl);
-                console.log('Successfully deleted from Cloudinary');
+                console.log("Successfully deleted from Cloudinary");
             }
             catch (cloudinaryError) {
-                console.error('Failed to delete from Cloudinary:', cloudinaryError);
+                console.error("Failed to delete from Cloudinary:", cloudinaryError);
                 // Continue with story deletion even if Cloudinary fails
             }
         }
-        console.log('Deleting story views');
+        console.log("Deleting story views");
         yield prisma_1.default.storyView.deleteMany({
             where: { storyId },
         });
-        console.log('Deleting story');
+        console.log("Deleting story");
         yield prisma_1.default.story.delete({
             where: { id: storyId },
         });
-        console.log('Story deleted successfully');
+        console.log("Story deleted successfully");
         res.json({ message: "Story deleted successfully" });
     }
     catch (err) {
-        console.error('Delete story error details:', err);
+        console.error("Delete story error details:", err);
         next(err);
     }
 });

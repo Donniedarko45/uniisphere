@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, RequestHandler } from "express";
 import { getFeed } from "../controllers/feed.controller";
 import {
   createComment,
@@ -23,17 +23,20 @@ import {
 
 const router = Router();
 
-// Public routes
-router.get("/:postId", getPost as any);
-
 // Protected routes - Feed
 router.get("/feed", authenticate, getFeed);
 
-// Protected routes - User specific 
-router.get("/user/:userId", authenticate, getPost as any);
+// Protected routes - User posts
+router.get("/getUserAllPost", authenticate, getUserPosts as RequestHandler);
 
 // Protected routes - Post operations
 router.get("/stats/total", authenticate, getTotalPosts);
+
+// Protected routes - Post by ID
+router.get("/:postId", getPost as RequestHandler);
+
+// Protected routes - User specific 
+router.get("/user/:userId", authenticate, getPost as RequestHandler);
 
 router.post("/",
   authenticate,
@@ -56,8 +59,6 @@ router.delete("/:postId",
   deletePost
 );
 
-router.get("/getUserAllPost", authenticate, getUserPosts)
-
 // Protected routes - Social interactions
 router.post("/:postId/comments",
   authenticate,
@@ -70,16 +71,15 @@ router.post("/:postId/like",
   likePost
 );
 
-// Changed from DELETE /:postId to DELETE /:postId/unlike
 router.delete("/:postId/unlike",
   authenticate,
   unlikePost
 );
 
-// Get users who liked a post (like Instagram's feature)
+// Get users who liked a post
 router.get("/:postId/likes",
   authenticate,
-  getPostLikes as any
+  getPostLikes as RequestHandler
 );
 
 export default router;

@@ -236,8 +236,6 @@ model Blogs {
   title        String   @db.VarChar(255)
   description  String?
   content      String
-  titlePhoto   String?
-  contentVideo String[]
   mediaUrl     String[]
   authorId     String
   published    Boolean  @default(false)

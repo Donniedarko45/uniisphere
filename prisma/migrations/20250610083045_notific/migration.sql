@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Blogs" ALTER COLUMN "mediaUrl" DROP NOT NULL,
+ALTER COLUMN "mediaUrl" SET DATA TYPE TEXT;

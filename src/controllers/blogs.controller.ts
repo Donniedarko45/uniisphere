@@ -1,77 +1,33 @@
 import { NextFunction, Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
-import { uploadBlogMedia } from "../services/cloudinaryService";
+import cloudinary from "../utils/cloudinary";
+import prisma from "../config/prisma";
 
-const prisma = new PrismaClient();
+interface AuthRequest extends Request {
+  userId?: string;
+}
 
-// Helper function to validate video URLs
-const isValidVideoUrl = (url: string): boolean => {
-  const videoUrlPatterns = [
-    /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/.+/i,  // YouTube
-    /^https?:\/\/(www\.)?vimeo\.com\/.+/i,               // Vimeo
-    /^https?:\/\/(www\.)?dailymotion\.com\/.+/i,         // Dailymotion
-    /\.mp4(\?.*)?$/i,                                    // Direct MP4 links
-    /\.webm(\?.*)?$/i,                                   // WebM videos
-  ];
-  return videoUrlPatterns.some(pattern => pattern.test(url));
-};
-
-// Helper function to handle file uploads
-const handleFileUploads = async (files: Express.Multer.File[]) => {
-  const uploadResults = await Promise.all(
-    files.map(async (file) => {
-      const result = await uploadBlogMedia(file);
-      return {
-        url: result.url,
-        type: result.resourceType,
-        publicId: result.publicId
-      };
-    })
-  );
-
-  return uploadResults.reduce((acc, result) => {
-    if (result.type === 'video') {
-      acc.videos.push(result.url);
-    } else {
-      acc.images.push(result.url);
-    }
-    return acc;
-  }, { images: [] as string[], videos: [] as string[] });
-};
-
-// Validation schema for blog creation and updates
-const blogSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  content: z.string().min(1, "Content is required"),
-  titlePhoto: z.string().optional(),
-  contentVideo: z.array(z.string().refine(
-    url => isValidVideoUrl(url),
-    { message: "Invalid video URL format. Supported platforms: YouTube, Vimeo, Dailymotion, or direct MP4/WebM links" }
-  )).optional(),
-  mediaUrl: z.array(z.string()).optional(),
-  authorId: z.string().min(1, "Author ID is required"),
-  tags: z.array(z.string()).optional(),
-  published: z.boolean().optional()
-});
+//Maximum video duration in seconds (5 minutes)
+const MAX_VIDEO_DURATION = 300;
+// Maximum video size in bytes (100MB)
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 
 // Get all blogs
 export const getAllBlogs = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const blogs = await prisma.blogs.findMany({
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     });
-    
+
     return res.status(200).json({
       success: true,
-      data: blogs
+      data: blogs,
     });
   } catch (error) {
     next(error);
@@ -80,144 +36,131 @@ export const getAllBlogs = async (
 
 // Get single blog by ID
 export const getBlogById = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const { id } = req.params;
-    
+
     const blog = await prisma.blogs.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!blog) {
       return res.status(404).json({
         success: false,
-        message: "Blog not found"
+        message: "Blog not found",
       });
     }
 
     return res.status(200).json({
       success: true,
-      data: blog
+      data: blog,
     });
   } catch (error) {
     next(error);
   }
 };
 
-// Create new blog
+// Create new blog with enhanced video handling
 export const createBlog = async (
   req: Request,
   res: Response,
-  next: NextFunction
-): Promise<any> => {
+  next: NextFunction,
+) => {
+  const { content, authorId, description, title } = req.body;
+
   try {
-    console.log("Request body:", req.body);
-    console.log("Request file:", req.file);
+    const mediaUrls: string[] = [];
 
-    // Parse tags if they come as a string
-    let parsedBody = { ...req.body };
-    if (typeof req.body.tags === 'string') {
-      try {
-        parsedBody.tags = JSON.parse(req.body.tags);
-      } catch (e) {
-        // If parsing fails, split by comma
-        parsedBody.tags = req.body.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean);
-      }
-    }
+    if (!req.files || !Array.isArray(req.files)) {
+      console.log("No files uploaded or invalid file format");
+    } else {
+      for (const file of req.files) {
+        try {
+          if (!file.path) {
+            console.log(`No path found for file: ${file.originalname}`);
+            continue;
+          }
+          console.log("filePath:" + file.path);
 
-    // Convert published string to boolean
-    if (typeof req.body.published === 'string') {
-      parsedBody.published = req.body.published === 'true';
-    }
-
-    const validatedData = blogSchema.parse(parsedBody);
-    
-    // Handle file upload if present
-    let titlePhotoUrl = null;
-    if (req.file) {
-      try {
-        const uploadResult = await uploadBlogMedia(req.file);
-        titlePhotoUrl = uploadResult.url;
-        console.log("File uploaded successfully:", uploadResult.url);
-      } catch (uploadError: any) {
-        console.error("File upload error:", uploadError);
-        return res.status(400).json({
-          success: false,
-          message: "Failed to upload media file",
-          error: uploadError?.message || "Unknown upload error"
-        });
+          const result = await cloudinary.uploader.upload(file.path, {
+            folder: "posts",
+            resource_type: "auto",
+          });
+          console.log("result is ", result);
+          if (result && result.secure_url) {
+            mediaUrls.push(result.secure_url);
+          } else {
+            console.log(`Failed to upload file: ${file.originalname}`);
+          }
+        } catch (uploadError) {
+          console.error(`Error uploading file ${file.originalname}:`, uploadError);
+        }
       }
     }
 
     const blog = await prisma.blogs.create({
       data: {
-        ...validatedData,
-        titlePhoto: titlePhotoUrl,
-        published: validatedData.published ?? false
+        content,
+        mediaUrl: mediaUrls,
+        authorId,
+        description,
+        title,
       },
-      include: {
-        author: true
-      }
     });
 
-    console.log("Blog created successfully:", blog.id);
-
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
-      data: blog
+      blog,
+      mediaUrls,
+      message: mediaUrls.length
+        ? "blog created with media"
+        : "blog created without media",
     });
   } catch (error) {
-    console.error("Blog creation error:", error);
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation error",
-        errors: error.errors
-      });
-    }
+    console.error("Error in createBlog:", error);
     next(error);
   }
 };
 
 // Update blog
 export const updateBlog = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const { id } = req.params;
-    const validatedData = blogSchema.partial().parse(req.body);
-    
+
     const existingBlog = await prisma.blogs.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!existingBlog) {
       return res.status(404).json({
         success: false,
-        message: "Blog not found"
+        message: "Blog not found",
       });
     }
 
     const updatedBlog = await prisma.blogs.update({
       where: { id },
-      data: validatedData
+      //@ts-ignore
+      data: validatedData,
     });
 
     return res.status(200).json({
       success: true,
-      data: updatedBlog
+      data: updatedBlog,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({
         success: false,
         message: "Validation error",
-        errors: error.errors
+        errors: error.errors,
       });
     }
     next(error);
@@ -226,31 +169,31 @@ export const updateBlog = async (
 
 // Delete blog
 export const deleteBlog = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<any> => {
   try {
     const { id } = req.params;
-    
+
     const existingBlog = await prisma.blogs.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!existingBlog) {
       return res.status(404).json({
         success: false,
-        message: "Blog not found"
+        message: "Blog not found",
       });
     }
 
     await prisma.blogs.delete({
-      where: { id }
+      where: { id },
     });
 
     return res.status(200).json({
       success: true,
-      message: "Blog deleted successfully"
+      message: "Blog deleted successfully",
     });
   } catch (error) {
     next(error);

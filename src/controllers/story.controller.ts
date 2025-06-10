@@ -1,16 +1,10 @@
 import cloudinary from "../utils/cloudinary";
 import { NextFunction, Request, Response } from "express";
-import { string, z } from "zod";
-import fs from "fs";
-import { ResourceLimits } from "worker_threads";
 import prisma from "../config/prisma";
-import { error } from "console";
-import path from "path";
 
 interface AuthRequest extends Request {
   userId?: string;
 }
-
 
 export const createStory = async (
   req: AuthRequest,
@@ -21,15 +15,15 @@ export const createStory = async (
     const { caption, mediaType } = req.body;
     const userId = req.userId;
 
-   if(!userId){
-    console.log("userId is not found"+userId)
-    return res.status(400).json({
-      error: "userId is not found",
-    });
-  }
+    if (!userId) {
+      console.log("userId is not found" + userId);
+      return res.status(400).json({
+        error: "userId is not found",
+      });
+    }
     console.log("userId!!!!!", userId);
     console.log("req.body", req.body);
-  
+
     if (!req.file) {
       return res.status(400).json({
         error: "no media file uploaded",
@@ -38,9 +32,9 @@ export const createStory = async (
     console.log("File details:", {
       path: req.file.path,
       mimetype: req.file.mimetype,
-      size: req.file.size
+      size: req.file.size,
     });
-    
+
     let mediaUrl: string;
     try {
       const result = await cloudinary.uploader.upload(req.file.path, {
@@ -49,9 +43,12 @@ export const createStory = async (
       });
       console.log("Cloudinary upload successful:", result.secure_url);
       mediaUrl = result.secure_url;
-     // console.log(mediaUrl);
+      // console.log(mediaUrl);
     } catch (uploadError) {
-      console.error("Cloudinary upload error (continuing with local file):", uploadError);
+      console.error(
+        "Cloudinary upload error (continuing with local file):",
+        uploadError,
+      );
     }
 
     try {
@@ -59,7 +56,7 @@ export const createStory = async (
         data: {
           userId,
           //@ts-ignore
-          mediaUrl:mediaUrl,
+          mediaUrl: mediaUrl,
           type: mediaType,
           duration: 5,
           caption: caption,
@@ -71,7 +68,7 @@ export const createStory = async (
       return res.status(201).json({ story });
     } catch (error) {
       console.error("error in creating story:", error);
-      next(error)
+      next(error);
     }
   } catch (err: any) {
     console.error("Story creation error:", err);
@@ -173,15 +170,15 @@ export const deleteStory = async (
   const storyId = req.params.id;
   const userId = req.userId;
 
-  console.log('Delete Story - Params:', { storyId, userId });
+  console.log("Delete Story - Params:", { storyId, userId });
 
   try {
-    console.log('Attempting to find story:', storyId);
+    console.log("Attempting to find story:", storyId);
     const story = await prisma.story.findUnique({
       where: { id: storyId },
     });
 
-    console.log('Found story:', story);
+    console.log("Found story:", story);
 
     if (!story) {
       return res.status(404).json({ error: "Story not found" });
@@ -196,29 +193,29 @@ export const deleteStory = async (
     // Try to delete from Cloudinary but don't let it block the story deletion
     if (story.mediaUrl) {
       try {
-        console.log('Attempting to delete from cloudinary:', story.mediaUrl);
+        console.log("Attempting to delete from cloudinary:", story.mediaUrl);
         await cloudinary.uploader.destroy(story.mediaUrl);
-        console.log('Successfully deleted from Cloudinary');
+        console.log("Successfully deleted from Cloudinary");
       } catch (cloudinaryError) {
-        console.error('Failed to delete from Cloudinary:', cloudinaryError);
+        console.error("Failed to delete from Cloudinary:", cloudinaryError);
         // Continue with story deletion even if Cloudinary fails
       }
     }
 
-    console.log('Deleting story views');
+    console.log("Deleting story views");
     await prisma.storyView.deleteMany({
       where: { storyId },
     });
 
-    console.log('Deleting story');
+    console.log("Deleting story");
     await prisma.story.delete({
       where: { id: storyId },
     });
 
-    console.log('Story deleted successfully');
+    console.log("Story deleted successfully");
     res.json({ message: "Story deleted successfully" });
   } catch (err) {
-    console.error('Delete story error details:', err);
+    console.error("Delete story error details:", err);
     next(err);
   }
 };

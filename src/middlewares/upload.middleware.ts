@@ -1,7 +1,7 @@
 import { Request } from "express";
-import fs from 'fs';
+import fs from "fs";
 import multer, { FileFilterCallback } from "multer";
-import path from 'path';
+import path from "path";
 
 const storage = multer.diskStorage({
   destination: function (
@@ -9,7 +9,7 @@ const storage = multer.diskStorage({
     file: Express.Multer.File,
     cb: (error: Error | null, destination: string) => void,
   ) {
-    const uploadPath = path.join(__dirname, '../../public/temp');
+    const uploadPath = path.join(__dirname, "../../public/temp");
     // Create directory if it doesn't exist
     try {
       if (!fs.existsSync(uploadPath)) {
@@ -33,20 +33,22 @@ const storage = multer.diskStorage({
 export const upload = multer({
   storage,
   limits: {
-    fileSize: 15 * 1024 * 1024,
+    fileSize: 20 * 1024 * 1024,
   },
   fileFilter: (
     req: Request,
     file: Express.Multer.File,
     cb: FileFilterCallback,
   ) => {
-    const allowedTypes = /jpeg|jpg|png|gif/;
+    const allowedTypes = /jpeg|jpg|png|gif|mp4/;
     const extname = allowedTypes.test(file.mimetype);
     const mimetypeCheck = allowedTypes.test(
       file.originalname.split(".").pop() || "",
     );
+    console.log(mimetypeCheck);
 
     if (extname && mimetypeCheck) {
+      console.log("doneeeeeeeeeeeeeeeeee");
       return cb(null, true);
     } else {
       cb(new Error("Error: File type not supported!"));
@@ -68,54 +70,21 @@ export const storyUpload = multer({
     // Allow images and videos for stories
     const allowedImageTypes = /jpeg|jpg|png|gif/;
     const allowedVideoTypes = /mp4|avi|mov|wmv|flv|webm/;
-    
+
     const isImage = allowedImageTypes.test(file.mimetype);
     const isVideo = allowedVideoTypes.test(file.mimetype);
-    
-    const imageMimetypeCheck = file.mimetype.startsWith('image/');
-    const videoMimetypeCheck = file.mimetype.startsWith('video/');
+
+    const imageMimetypeCheck = file.mimetype.startsWith("image/");
+    const videoMimetypeCheck = file.mimetype.startsWith("video/");
 
     if ((isImage && imageMimetypeCheck) || (isVideo && videoMimetypeCheck)) {
       return cb(null, true);
     } else {
-      cb(new Error("Error: Only images (JPEG, JPG, PNG, GIF) and videos (MP4, AVI, MOV, WMV, FLV, WEBM) are supported for stories!"));
-    }
-  },
-});
-
-// Enhanced upload middleware for blogs (supports images and short videos)
-export const blogMediaUpload = multer({
-  storage,
-  limits: {
-    fileSize: 30 * 1024 * 1024, // 30MB limit for blog media (matching frontend limit)
-  },
-  fileFilter: (
-    req: Request,
-    file: Express.Multer.File,
-    cb: FileFilterCallback,
-  ) => {
-    console.log('Blog media upload - File info:', {
-      fieldname: file.fieldname,
-      originalname: file.originalname,
-      mimetype: file.mimetype,
-      size: file.size
-    });
-
-    // Allow images and videos for blogs
-    const allowedImageTypes = /jpeg|jpg|png|gif|webp/;
-    const allowedVideoTypes = /mp4|webm|avi|mov/; // Added avi and mov to match frontend
-    
-    const isImage = allowedImageTypes.test(file.mimetype);
-    const isVideo = allowedVideoTypes.test(file.mimetype);
-    
-    const imageMimetypeCheck = file.mimetype.startsWith('image/');
-    const videoMimetypeCheck = file.mimetype.startsWith('video/');
-
-    // Additional check for video duration could be done at the controller level
-    if ((isImage && imageMimetypeCheck) || (isVideo && videoMimetypeCheck)) {
-      return cb(null, true);
-    } else {
-      cb(new Error("Error: Only images (JPEG, JPG, PNG, GIF, WEBP) and videos (MP4, WEBM, AVI, MOV) are supported for blogs!"));
+      cb(
+        new Error(
+          "Error: Only images (JPEG, JPG, PNG, GIF) and videos (MP4, AVI, MOV, WMV, FLV, WEBM) are supported for stories!",
+        ),
+      );
     }
   },
 });
