@@ -7,14 +7,12 @@ import {
 import {
   postLimiter,
   uploadLimiter,
-  dbIntensiveLimiter,
-  searchLimiter,
 } from "../middlewares/rateLimiter.middleware";
-import { authenticate, verifyUser } from "../middlewares/auth.middleware";
+import { authenticate } from "../middlewares/auth.middleware";
 //import { blogMediaUpload } from '../middlewares/upload.middleware';
-import { storyUpload } from "../middlewares/upload.middleware";
+//import { storyUpload } from "../middlewares/upload.middleware";
 const router = Router();
-
+import { upload } from "../middlewares/upload.middleware";
 router.get("/allBlogs", getAllBlogs);
 
 router.get("/blog/:id", getBlogById);
@@ -22,10 +20,8 @@ router.get("/blog/:id", getBlogById);
 router.post(
   "/create",
   authenticate,
-  verifyUser,
-  postLimiter,
-  uploadLimiter,
-  storyUpload.array("media", 2),
+
+  upload.array("media", 2),
   createBlog as any,
 );
 

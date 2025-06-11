@@ -8,32 +8,32 @@ import {
   register,
   resendOtp,
   resetPassword,
-  verifyOtp
+  verifyOtp,
 } from "../controllers/auth.controller";
-import { 
-  authLimiter, 
-  emailLimiter, 
-  passwordResetLimiter 
+import {
+  authLimiter,
+  emailLimiter,
+  passwordResetLimiter,
 } from "../middlewares/rateLimiter.middleware";
 
 const router = Router();
 
 // Apply auth rate limiter to login and register
-router.post("/register", authLimiter, register);
-router.post("/login", authLimiter, login);
-router.post("/verifyOtp", authLimiter, verifyOtp);
-router.post("/completeProfile", authLimiter, completeProfile);
+router.post("/register", register);
+router.post("/login", login);
+router.post("/verifyOtp", verifyOtp);
+router.post("/completeProfile", completeProfile);
 
 // Apply email rate limiter to email-sending endpoints
-router.post("/resendOtp", emailLimiter, resendOtp);
+router.post("/resendOtp", resendOtp);
 
 // Apply less restrictive limiter to OAuth routes
 router.post("/oauth/google", googleAuth);
-router.get('/google', googleAuth);
-router.get('/google/callback', googleAuthCallback);
+router.get("/google", googleAuth);
+router.get("/google/callback", googleAuthCallback);
 
 // Apply password reset rate limiter to password reset routes
-router.post("/forgot-password", passwordResetLimiter, forgotPassword);
-router.post("/reset-password", passwordResetLimiter, resetPassword);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 export default router;

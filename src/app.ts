@@ -35,14 +35,14 @@ app.use(express.json());
 // CORS configuration - Fixed for Chrome/Brave compatibility
 app.use(
   cors({
-          origin: [
-        "http://localhost:5173",           // Vite dev server
-        "http://localhost:5175",           // Alternative dev port
-        "http://localhost:5174",           // Alternative Vite port
-        "https://main.uniisphere.in",      // Production frontend (removed trailing slash)
-        "http://localhost:3000",           // Added back common dev port
-        // Add your actual production domain here
-      ],
+    origin: [
+      "http://localhost:5173", // Vite dev server
+      "http://localhost:5175", // Alternative dev port
+      "http://localhost:5174", // Alternative Vite port
+      "https://main.uniisphere.in", // Production frontend (removed trailing slash)
+      "http://localhost:3000", // Added back common dev port
+      // Add your actual production domain here
+    ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
@@ -59,45 +59,50 @@ app.use(
 );
 
 // Explicitly handle preflight requests
-app.options('*', cors({
-  origin: [
-    "http://localhost:5173",
-    "http://localhost:5175",
-    "http://localhost:5174", 
-    "https://main.uniisphere.in",
-    "http://localhost:3000",
-  ],
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization", 
-    "X-Requested-With",
-    "Accept",
-    "Origin",
-    "Access-Control-Request-Method",
-    "Access-Control-Request-Headers",
-  ],
-  credentials: false,
-  optionsSuccessStatus: 200,
-}));
+app.options(
+  "*",
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5175",
+      "http://localhost:5174",
+      "https://main.uniisphere.in",
+      "http://localhost:3000",
+    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "Origin",
+      "Access-Control-Request-Method",
+      "Access-Control-Request-Headers",
+    ],
+    credentials: false,
+    optionsSuccessStatus: 200,
+  }),
+);
 
-app.use(express.urlencoded({ extended: true }));
+//app.use(express.urlencoded({ extended: true }));
 
 // Debug middleware for CORS requests
 app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    console.log(`CORS Preflight: ${req.method} ${req.url} from origin: ${req.headers.origin}`);
+  if (req.method === "OPTIONS") {
+    console.log(
+      `CORS Preflight: ${req.method} ${req.url} from origin: ${req.headers.origin}`,
+    );
   }
   next();
 });
 
 // Health check endpoint for CORS testing
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    message: 'CORS is working!',
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "CORS is working!",
     timestamp: new Date().toISOString(),
-    origin: req.headers.origin 
+    origin: req.headers.origin,
   });
 });
 

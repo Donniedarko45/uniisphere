@@ -65,7 +65,7 @@ app.use((0, cors_1.default)({
     optionsSuccessStatus: 200, // For legacy browser support
 }));
 // Explicitly handle preflight requests
-app.options('*', (0, cors_1.default)({
+app.options("*", (0, cors_1.default)({
     origin: [
         "http://localhost:5173",
         "http://localhost:5175",
@@ -86,21 +86,21 @@ app.options('*', (0, cors_1.default)({
     credentials: false,
     optionsSuccessStatus: 200,
 }));
-app.use(express_1.default.urlencoded({ extended: true }));
+//app.use(express.urlencoded({ extended: true }));
 // Debug middleware for CORS requests
 app.use((req, res, next) => {
-    if (req.method === 'OPTIONS') {
+    if (req.method === "OPTIONS") {
         console.log(`CORS Preflight: ${req.method} ${req.url} from origin: ${req.headers.origin}`);
     }
     next();
 });
 // Health check endpoint for CORS testing
-app.get('/api/health', (req, res) => {
+app.get("/api/health", (req, res) => {
     res.json({
-        status: 'ok',
-        message: 'CORS is working!',
+        status: "ok",
+        message: "CORS is working!",
         timestamp: new Date().toISOString(),
-        origin: req.headers.origin
+        origin: req.headers.origin,
     });
 });
 app.use("/api/auth", auth_routes_1.default);

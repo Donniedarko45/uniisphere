@@ -26,7 +26,7 @@ router.post(
 );
 
 // Get all stories from connected users (database intensive)
-router.get("/", authenticate, dbIntensiveLimiter, getStories as any);
+router.get("/", authenticate, getStories as any);
 
 // View a story
 router.post("/:storyId/view", authenticate, viewStory as any);
@@ -35,4 +35,3 @@ router.post("/:storyId/view", authenticate, viewStory as any);
 router.delete("/:id", authenticate, deleteStory as any);
 
 export default router;
-
