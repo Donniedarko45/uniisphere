@@ -5,6 +5,7 @@ import {
   getConnections,
   getConnectionStats,
   getPendingRequests,
+  revokeConnectionRequest,
   sendConnectionRequest,
 } from "../controllers/connection.controller";
 import { authenticate } from "../middlewares/auth.middleware";
@@ -22,7 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 router.post("/connect/:userId", authenticate, sendConnectionRequest);
 router.post("/accept/:connectionId", authenticate, acceptConnection);
 router.post("/decline/:connectionId", authenticate, declineConnection);
-
+router.post("/revoke",authenticate,revokeConnectionRequest)
 // Apply database intensive limiter to routes that fetch multiple connections
 router.post("/getPending/", authenticate, getPendingRequests);
 router.get("/connections", authenticate, getConnections);

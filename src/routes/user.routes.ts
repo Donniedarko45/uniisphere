@@ -35,7 +35,11 @@ router.patch(
 );
 
 // Get total users excluding existing connections
-router.get("/usersWithoutConnections", authenticate, getTotalUsersExcludingExistingConnections);
+router.post(
+  "/usersWithoutConnections",
+  authenticate,
+  getTotalUsersExcludingExistingConnections,
+);
 
 // Get all users (database intensive operation)
 router.get("/", getAllUsers);

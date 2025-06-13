@@ -302,3 +302,52 @@ export const getConnectionStats = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to fetch connection statistics" });
   }
 };
+
+export const revokeConnectionRequest = async (
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<any> => {
+  const { userId1, userId2 } = req.body;
+
+  if (!userId1 || !userId2) {
+    return res.status(400).json({
+      message: "Both userId1 and userId2 are required"
+    });
+  }
+
+  try {
+    const connection = await prisma.connection.findFirst({
+      where: {
+        userId1,
+        userId2,
+        status: "pending"
+      }
+    });
+
+    if (!connection) {
+      return res.status(404).json({ 
+        message: "No pending connection request found" 
+      });
+    }
+
+    await prisma.connection.delete({
+      where: {
+        id: connection.id
+      }
+    });
+
+    // Notify the other user that the connection request was revoked
+    io.to(userId2).emit("connectionRequestRevoked", {
+      connectionId: connection.id,
+      senderId: userId1,
+      timestamp: new Date()
+    });
+
+    return res.status(200).json({
+      message: "Connection request revoked successfully"
+    });
+  } catch (error) {
+    console.error("Error revoking connection request:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
