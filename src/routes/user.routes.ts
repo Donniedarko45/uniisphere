@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getAllUsers,
   getProfile,
+  getTotalUsersExcludingExistingConnections,
   updateProfile,
   updateUserStatus,
 } from "../controllers/user.controller";
@@ -32,6 +33,9 @@ router.patch(
   },
   updateProfile,
 );
+
+// Get total users excluding existing connections
+router.get("/usersWithoutConnections", authenticate, getTotalUsersExcludingExistingConnections);
 
 // Get all users (database intensive operation)
 router.get("/", getAllUsers);

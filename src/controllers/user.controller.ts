@@ -410,3 +410,88 @@ export const updateUserStatus = async (
     });
   }
 };
+
+export const getTotalUsersExcludingExistingConnections = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<any> => {
+  try {
+    const { userId } = req.body;
+    const { search } = req.query;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Get all connections where user is either userId1 or userId2
+    const connections = await prisma.connection.findMany({
+      where: {
+        OR: [{ userId1: userId }, { userId2: userId }],
+      },
+    });
+
+    // Get all connected user IDs
+    const connectedUserIds = connections.map((connection) =>
+      connection.userId1 === userId ? connection.userId2 : connection.userId1,
+    );
+
+    // Add the requesting user's ID to exclude them from results
+    connectedUserIds.push(userId);
+
+    const users = await prisma.user.findMany({
+      where: {
+        AND: [
+          { id: { notIn: connectedUserIds } },
+          search
+            ? {
+                OR: [
+                  {
+                    username: {
+                      contains: search as string,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    firstName: {
+                      contains: search as string,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    lastName: {
+                      contains: search as string,
+                      mode: "insensitive",
+                    },
+                  },
+                ],
+              }
+            : {},
+        ],
+      },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        headline: true,
+        profilePictureUrl: true,
+        location: true,
+        college: true,
+        degree: true,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    console.error("Error in getTotalUsersExcludingExistingConnections:", error);
+    next(error);
+  }
+};
