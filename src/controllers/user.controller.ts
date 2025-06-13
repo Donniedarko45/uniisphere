@@ -46,6 +46,8 @@ export const getProfile = async (
         username: true,
         firstName: true,
         lastName: true,
+        Gender: true,
+        PhoneNumber: true,
         location: true,
         About: true,
         Skills: true,
@@ -118,7 +120,7 @@ export const getProfile = async (
             Skills: user.Skills,
             Interests: user.Interests,
             About: user.About,
-            experiences: user.experiences, // Added experience data for non-connected users
+            experiences: user.experiences,
             class10Board: user.class10Board,
             class12Board: user.class12Board,
             profilePictureUrl: user.profilePictureUrl,

@@ -10,6 +10,7 @@ import {
   getUserPosts,
   likePost,
   unlikePost,
+  deleteComment,
   updatePost
 } from "../controllers/post.controller";
 import { authenticate, verifyUser } from "../middlewares/auth.middleware";
@@ -63,6 +64,11 @@ router.delete("/:postId",
 router.post("/:postId/comments",
   authenticate,
   createComment
+);
+
+router.delete("/:postId/comments/:commentId",
+  authenticate,
+  deleteComment
 );
 
 router.post("/:postId/like",

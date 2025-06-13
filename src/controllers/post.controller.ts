@@ -278,6 +278,38 @@ export const createComment = async (
   }
 };
 
+
+export const deleteComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<any> => {
+  try {
+    const { commentId } = req.params; 
+    const userId = (req as any).userId;
+
+    const comment = await prisma.comments.findUnique({
+      where: { id: commentId },
+    });
+
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    if (comment.userId !== userId) {
+      return res.status(403).json({ message: "You don't have permission to delete this comment" });
+    }
+
+    await prisma.comments.delete({
+      where: { id: commentId },
+    });
+
+    res.status(200).json({ message: "Comment deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const likePost = async (
   req: Request,
   res: Response,
