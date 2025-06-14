@@ -423,22 +423,27 @@ export const getTotalUsersExcludingExistingConnections = async (
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
-
+    
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Get all connections where user is either userId1 or userId2
+    // Get all connections (both accepted and pending) where user is either userId1 or userId2
     const connections = await prisma.connection.findMany({
       where: {
-        OR: [{ userId1: userId }, { userId2: userId }],
+        OR: [
+          { userId1: userId },
+          { userId2: userId }
+        ]
       },
     });
 
-    // Get all connected user IDs
-    const connectedUserIds = connections.map((connection) =>
-      connection.userId1 === userId ? connection.userId2 : connection.userId1,
-    );
+    // Get all connected user IDs (only for accepted connections)
+    const connectedUserIds = connections
+      .filter(connection => connection.status === "accepted")
+      .map(connection => 
+        connection.userId1 === userId ? connection.userId2 : connection.userId1
+      );
 
     // Add the requesting user's ID to exclude them from results
     connectedUserIds.push(userId);
@@ -447,31 +452,14 @@ export const getTotalUsersExcludingExistingConnections = async (
       where: {
         AND: [
           { id: { notIn: connectedUserIds } },
-          search
-            ? {
-                OR: [
-                  {
-                    username: {
-                      contains: search as string,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    firstName: {
-                      contains: search as string,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    lastName: {
-                      contains: search as string,
-                      mode: "insensitive",
-                    },
-                  },
-                ],
-              }
-            : {},
-        ],
+          search ? {
+            OR: [
+              { username: { contains: search as string, mode: 'insensitive' } },
+              { firstName: { contains: search as string, mode: 'insensitive' } },
+              { lastName: { contains: search as string, mode: 'insensitive' } }
+            ]
+          } : {}
+        ]
       },
       select: {
         id: true,
@@ -482,13 +470,32 @@ export const getTotalUsersExcludingExistingConnections = async (
         profilePictureUrl: true,
         location: true,
         college: true,
-        degree: true,
-      },
+        degree: true
+      }
     });
 
+    // Add connection status to each user
+    const usersWithConnectionStatus = await Promise.all(
+      users.map(async (user) => {
+        const pendingConnection = connections.find(
+          connection => 
+            (connection.userId1 === userId && connection.userId2 === user.id) ||
+            (connection.userId1 === user.id && connection.userId2 === userId)
+        );
+
+        return {
+          ...user,
+          connectionStatus: pendingConnection ? {
+            status: pendingConnection.status,
+            isSender: pendingConnection.userId1 === userId
+          } : null
+        };
+      })
+    );
+    
     res.status(200).json({
       success: true,
-      data: users,
+      data: usersWithConnectionStatus,
     });
   } catch (error) {
     console.error("Error in getTotalUsersExcludingExistingConnections:", error);

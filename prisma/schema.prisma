@@ -160,6 +160,9 @@ model Share {
   user      User     @relation(fields: [userId], references: [id])
 }
 
+
+// pending , accepted , rejected
+
 model Post {
   id         String     @id @default(uuid())
   content    String
