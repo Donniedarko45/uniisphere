@@ -328,3 +328,15 @@ model Notification {
   @@index([type, createdAt])
   @@map("notifications")
 }
+
+
+model Mentorship{
+    id String @id @default(uuid())
+    username String @unique
+    email String @unique
+    name String?
+    Age  Int?
+    profilePictureUrl String?
+    verified Boolean @default(false)
+    Experience String[]
+  }
